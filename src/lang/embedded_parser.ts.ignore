@@ -1,0 +1,520 @@
+import {
+  EmbeddedActionsParser,
+  type IRecognitionException
+} from "chevrotain";
+import * as monaco from "monaco-editor";
+import "./cst_parser";
+import {
+  AssignmentExpression,
+  BinaryExpression,
+  CallExpression,
+  Const,
+  IdentifierExpression,
+  Reference,
+  UnaryExpression,
+  type AssignmentExprLhs,
+  type BinaryExprRhs,
+  type Expression,
+} from "./expression";
+import { CATEGORIES as C, LEXER, TOKENS as T } from "./lexer";
+import { LocatedName, mkRange } from "./loc_utils";
+import type { BinaryOperator, UnaryOperator } from "./operators";
+import { Program } from "./program";
+import {
+  BlockStatement,
+  EmptyStatement,
+  ExpressionStatement,
+  FunctionDeclarationStatement,
+  IfStatement,
+  ReturnStatement,
+  SequenceStatement,
+  VariableDeclarationStatement,
+  WhileStatement,
+  type Declaration,
+  type Statement,
+} from "./statements";
+
+type Definition = VariableDeclarationStatement | FunctionDeclarationStatement;
+
+export class CRobotsParser extends EmbeddedActionsParser {
+  public variableDeclarations = new Set<VariableDeclarationStatement>();
+  public functionDeclarations = new Set<FunctionDeclarationStatement>();
+  public uses = new Map<monaco.IRange, Definition>();
+
+  constructor() {
+    super(Object.values(T));
+    this.performSelfAnalysis();
+  }
+
+  // A program is a sequence of declarations
+  public program = this.RULE("program", (): Program => {
+    let declarations: Statement[] = [];
+
+    this.MANY(() => {
+      let s = this.SUBRULE(this.toplevelStatement);
+      declarations.push(s);
+    });
+
+    return new Program(declarations);
+  });
+
+  private toplevelStatement = this.RULE(
+    "toplevelStatement",
+    (): Statement =>
+      this.OR([
+        {
+          ALT: () => {
+            let d = this.SUBRULE(this.functionStatement);
+            this.functionDeclarations.add(d as FunctionDeclarationStatement);
+            return d;
+          },
+        },
+        {
+          ALT: () => {
+            let d = this.SUBRULE(this.declarationStatement);
+            this.variableDeclarations.add(d as VariableDeclarationStatement);
+            return d;
+          },
+        },
+      ])
+  );
+
+  // Statements
+  private statementSequence = this.RULE("statementSequence", () => {
+    let statements: Statement[] = [];
+
+    this.MANY(() => {
+      let s = this.SUBRULE(this.statement);
+      statements.push(s);
+    });
+
+    return statements;
+  });
+
+  public statement = this.RULE(
+    "statement",
+    (): Statement =>
+      this.OR([
+        { ALT: () => this.SUBRULE(this.expressionStatement) },
+        { ALT: () => this.SUBRULE(this.selectiveStatement) },
+        { ALT: () => this.SUBRULE(this.whileStatement) },
+        { ALT: () => this.SUBRULE(this.compoundStatement) },
+        { ALT: () => this.SUBRULE(this.jumpStatement) },
+        { ALT: () => this.SUBRULE(this.declarationStatement) },
+      ])
+  );
+
+  private functionStatement = this.RULE("functionStatement", (): Statement => {
+    let name = this.SUBRULE(this.identifier);
+    console.log(name);
+    let params: LocatedName[] = [];
+    this.CONSUME(T["("]);
+    this.MANY_SEP({
+      SEP: T[","],
+      DEF: () => {
+        let p = this.SUBRULE2(this.identifier);
+        params.push(p);
+      },
+    });
+    this.CONSUME(T[")"]);
+    this.CONSUME(T["{"]);
+    let body = this.SUBRULE(this.statementSequence);
+    let end = this.CONSUME(T["}"]);
+    let funDecl: FunctionDeclarationStatement;
+
+    this.ACTION(() => {
+      funDecl = new FunctionDeclarationStatement(
+        name,
+        params,
+        body,
+        (name.location as monaco.Range).plusRange(mkRange(end))
+      );
+      this.functionDeclarations.add(funDecl);
+    });
+
+    return funDecl;
+  });
+
+  private declarationStatement = this.RULE(
+    "declarationStatement",
+    (): Statement => {
+      let start = this.CONSUME(T["int"]);
+      let declarations: Declaration[] = [];
+
+      this.AT_LEAST_ONE_SEP({
+        SEP: T[","],
+        DEF: () => {
+          let name = this.SUBRULE(this.identifier);
+          let expr = this.OPTION(() => {
+            this.CONSUME(T["="]);
+            return this.SUBRULE(this.expression);
+          });
+          // this.SUBRULE(this.assignmentExpression);
+
+          declarations.push({ name, expr });
+        },
+      });
+      let end = this.CONSUME(T[";"]);
+      let varDecl: VariableDeclarationStatement;
+
+      this.ACTION(() => {
+        varDecl = new VariableDeclarationStatement(
+          declarations,
+          mkRange(start, end)
+        );
+        this.variableDeclarations.add(varDecl);
+      });
+
+      return varDecl;
+    }
+  );
+
+  private compoundStatement = this.RULE("compoundStatement", (): Statement => {
+    let start = this.CONSUME(T["{"]);
+    let body = this.SUBRULE(this.statementSequence);
+    let end = this.CONSUME(T["}"]);
+
+    return new BlockStatement(body, mkRange(start, end));
+  });
+
+  private jumpStatement = this.RULE("jumpStatement", (): Statement => {
+    let start = this.CONSUME(T["return"]);
+    let expr = this.OPTION(() => this.SUBRULE(this.expression));
+    let end = this.CONSUME(T[";"]);
+
+    return new ReturnStatement(expr, mkRange(start, end));
+  });
+
+  private selectiveStatement = this.RULE(
+    "selectiveStatement",
+    (): Statement => {
+      let start = this.CONSUME(T["if"]);
+      this.CONSUME(T["("]);
+      let condition = this.SUBRULE(this.expression);
+      this.CONSUME(T[")"]);
+      let thenBranch = this.SUBRULE(this.statement);
+      let elseBranch = this.OPTION((): Statement => {
+        this.CONSUME(T["else"]);
+        return this.SUBRULE2(this.statement);
+      });
+
+      let end = elseBranch ? elseBranch.location : thenBranch.location;
+
+      return new IfStatement(
+        condition,
+        thenBranch,
+        elseBranch,
+        mkRange(start).plusRange(end!)
+      );
+    }
+  );
+
+  private whileStatement = this.RULE(
+    "whileStatement",
+    (): Statement =>
+      this.OR([
+        {
+          ALT: (): Statement => {
+            let start = this.CONSUME(T["while"]);
+            this.CONSUME(T["("]);
+            let condition = this.SUBRULE(this.expression);
+            this.CONSUME(T[")"]);
+            let body = this.SUBRULE(this.statement);
+
+            return new WhileStatement(
+              condition,
+              body,
+              mkRange(start).plusRange(body.location!)
+            );
+          },
+        },
+        {
+          ALT: (): Statement => {
+            let start = this.CONSUME(T["do"]);
+            let body = this.SUBRULE2(this.statement);
+            this.CONSUME2(T["while"]);
+            this.CONSUME2(T["("]);
+            let condition = this.SUBRULE2(this.expression);
+            this.CONSUME2(T[")"]);
+            let end = this.CONSUME(T[";"]);
+
+            return new SequenceStatement(
+              body,
+              new WhileStatement(condition, body, mkRange(start, end))
+            );
+          },
+        },
+      ])
+  );
+
+  public expressionStatement = this.RULE(
+    "expressionStatement",
+    (): Statement =>
+      this.OR([
+        {
+          ALT: () => {
+            let expr = this.SUBRULE(this.expression);
+            let end = this.CONSUME(T[";"]);
+
+            return new ExpressionStatement(
+              expr,
+              (expr.location as monaco.Range).plusRange(mkRange(end))
+            );
+          },
+        },
+        // Empty statement (should probably be its own rule)
+        {
+          ALT: () => {
+            let start = this.CONSUME2(T[";"]);
+
+            return new EmptyStatement(mkRange(start));
+          },
+        },
+      ])
+  );
+
+  // Expressions
+  public expression = this.RULE("expression", () =>
+    this.SUBRULE(this.assignmentExpression)
+  );
+
+  /* 
+  x = 3 * 12 += 4;
+  y = 1;
+  x = y += y + x = y -= 43;
+  */
+  private assignmentExpression = this.RULE(
+    "assignmentExpression",
+    (): Expression => {
+      let names: AssignmentExprLhs[] = [];
+
+      this.MANY(() => {
+        let name = this.SUBRULE2(this.identifier, { LABEL: "lhs" });
+        let op = this.SUBRULE2(this.assignmentOperator); // void if basic assignment
+
+        names.push({ op, name });
+      });
+
+      let expr = this.SUBRULE(this.binaryLeftAssociativeExpression, {
+        LABEL: "rhs",
+      });
+
+      let namesRange = names.reduce(
+        (acc, { name }) => (acc as monaco.Range).plusRange(name.location),
+        expr.location
+      );
+
+      return names.length > 0
+        ? new AssignmentExpression(names, expr, namesRange)
+        : expr;
+    }
+  );
+
+  private assignmentOperator = this.RULE(
+    "assignmentOperator",
+    (): BinaryOperator | undefined =>
+      this.OR([
+        ...[T["+="], T["-="], T["/="], T["*="], T["%="]].map((tok) => ({
+          ALT: () => {
+            let itok = this.CONSUME(tok);
+            return itok.tokenType.name as BinaryOperator;
+          },
+        })),
+        {
+          ALT: () => {
+            this.CONSUME(T["="]);
+            return undefined;
+          },
+        },
+      ])
+  );
+
+  private binaryLeftAssociativeExpression = [
+    T["&&"],
+    T["||"],
+    C.EqualityOperator,
+    C.ComparisonOperator,
+    C.ShiftOperator,
+    C.AdditionOperator,
+    C.MultiplicationOperator,
+  ].reduceRight(
+    (acc, tok) =>
+      this.RULE(`${tok}Expression`, (): Expression => {
+        let lhs = this.SUBRULE(acc, { LABEL: "lhs" });
+        let rhs: BinaryExprRhs[] = [];
+
+        this.MANY(() => {
+          let op = this.CONSUME(T["||"]).tokenType.name as BinaryOperator;
+          let expr = this.SUBRULE2(acc, { LABEL: "rhs" });
+
+          rhs.push({ op, expr });
+        });
+
+        const location = rhs.reduce(
+          (acc, { expr }) => acc.plusRange(expr.location!),
+          lhs.location as monaco.Range
+        );
+
+        return rhs.length > 0 ? new BinaryExpression(lhs, rhs, location) : lhs;
+      }),
+    this.unaryExpression
+  );
+
+  private unaryExpression = this.RULE(
+    "unaryExpression",
+    (): Expression =>
+      this.OR([
+        {
+          ALT: () => this.SUBRULE(this.atomicExpression),
+        },
+        {
+          ALT: (): Expression => {
+            let start = this.CONSUME(C.IncrementOperator);
+            let name = this.SUBRULE(this.identifier);
+            const op = start.tokenType.name === "INCR" ? "ADD" : "MINUS";
+
+            return new AssignmentExpression(
+              [{ op, name }],
+              new Const(1),
+              mkRange(start).plusRange(name.location)
+            );
+          },
+        },
+        {
+          ALT: (): Expression => {
+            let op = this.CONSUME(C.UnaryOperator);
+            let expr = this.SUBRULE2(this.atomicExpression);
+
+            return new UnaryExpression(
+              op.tokenType.name as UnaryOperator,
+              expr,
+              mkRange(op).plusRange(expr.location!)
+            );
+          },
+        },
+      ])
+  );
+
+  private atomicExpression = this.RULE(
+    "atomicExpression",
+    (): Expression =>
+      this.OR([
+        { ALT: () => this.SUBRULE(this.callExpression) },
+        { ALT: () => this.SUBRULE2(this.parenthesizedExpression) },
+        {
+          ALT: () => {
+            const value = this.SUBRULE3(this.identifier);
+
+            let ref = [...this.variableDeclarations.values()].find((d) =>
+              d.declarations.find((d) => d.name.name === value.name)
+            );
+
+            return new IdentifierExpression(
+              new Reference(value.name, ref),
+              value.location
+            );
+          },
+        },
+        {
+          ALT: (): Expression => {
+            const tok = this.CONSUME(T["42"]);
+            const value = Number.parseInt(tok.image);
+            return new Const(value, mkRange(tok));
+          },
+        },
+      ])
+  );
+
+  private parenthesizedExpression = this.RULE(
+    "parenthesizedExpression",
+    (): Expression => {
+      this.CONSUME(T["("]);
+      let expr = this.SUBRULE(this.expression);
+      this.CONSUME(T[")"]);
+
+      return expr;
+    }
+  );
+
+  private callExpression = this.RULE("callExpression", (): Expression => {
+    let args: Expression[] = [];
+
+    let name = this.SUBRULE(this.identifier);
+    let ref = [...this.functionDeclarations.values()].find(
+      (d) => d.name.name === name.name
+    );
+
+    this.CONSUME(T["("]);
+    this.MANY_SEP({
+      SEP: T[","],
+      DEF: () => {
+        let a = this.SUBRULE(this.expression);
+        args.push(a);
+      },
+    });
+    let end = this.CONSUME(T[")"]);
+
+    return new CallExpression(
+      new Reference(name.name, ref),
+      args,
+      (name.location as monaco.Range).plusRange(mkRange(end))
+    );
+  });
+
+  private identifier = this.RULE("identifier", () =>
+    LocatedName.fromToken(this.CONSUME(T["x"]))
+  );
+}
+
+export const PARSER = new CRobotsParser();
+
+export function SyntaxError(errors: IRecognitionException[]) {
+  const err = new Error(
+    "There are parsing errors!\n" +
+      errors.map(
+        ({ message, token }, i) =>
+          `[${i}]: at line ${token.startLine} column ${token.startColumn}-${token.endColumn}, ${message}\n`
+      )
+  );
+  err.name = "SyntaxError";
+  return err;
+}
+
+function parseAst(input: string, rule: keyof typeof PARSER) {
+  const lexResult = LEXER.tokenize(input);
+
+  PARSER.input = lexResult.tokens;
+
+  try {
+    const ast = PARSER[rule]();
+    return ast;
+  } catch (e: any) {
+    return undefined;
+  }
+}
+
+export function parseExpression(input: string): Expression | undefined {
+  return parseAst(input, "expression");
+}
+
+export function parseStatement(input: string): Statement | undefined {
+  return parseAst(input, "statement");
+}
+
+export function parseProgram(input: string): Program | undefined {
+  ranges.clear();
+  return parseAst(input, "program");
+}
+
+export function logParserErrors() {
+  PARSER.errors.forEach((err) => {
+    console.log(
+      `${err.name}: ${err.message}
+cause:    ${err.cause}
+context:  ${err.context.ruleStack}
+token:    ${err.token.image}
+resynced: ${err.resyncedTokens}
+`
+    );
+  });
+}
