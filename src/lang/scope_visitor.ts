@@ -1,4 +1,5 @@
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Range } from "vscode";
 import {
   AssignmentExpression,
   BinaryExpression,
@@ -6,7 +7,7 @@ import {
   UnaryExpression,
   type Expression,
 } from "./expression";
-import { LocatedName } from "./loc_utils";
+import { LocatedName, strictContainsRange } from "./loc_utils";
 import type { Program } from "./program";
 import {
   BlockStatement,
@@ -19,11 +20,9 @@ import {
   type Statement,
 } from "./statements";
 
-type SymbolKind =
-  | monaco.languages.SymbolKind.Function
-  | monaco.languages.SymbolKind.Variable;
+type SymbolKind = vscode.SymbolKind.Function | vscode.SymbolKind.Variable;
 
-const { SymbolKind } = monaco.languages;
+const { SymbolKind } = vscode;
 
 interface Definition {
   kind: SymbolKind;
@@ -33,12 +32,12 @@ interface Definition {
 
 interface ScopeError {
   message: string;
-  location: monaco.IRange;
+  location: Range;
 }
 
 interface ScopeData {
   names: Map<string, Definition>;
-  range?: monaco.Range;
+  range?: Range;
   label?: string;
 }
 
@@ -59,7 +58,7 @@ export class Scope implements ScopeNode {
   public children: Scope[] = [];
 
   constructor(
-    public range: monaco.Range,
+    public range: Range,
     public parent?: Scope,
     public label?: string
   ) {}
@@ -82,7 +81,7 @@ export class Scope implements ScopeNode {
 
   appendChild(scope: Scope) {
     // validate
-    const scopeSmaller = this.range.containsRange(scope.range);
+    const scopeSmaller = this.range.contains(scope.range);
 
     if (!scopeSmaller) {
       console.log(
@@ -92,7 +91,7 @@ export class Scope implements ScopeNode {
     }
 
     const scopeOverlap = this.children.find((ch) => {
-      const inter = ch.range.intersectRanges(scope.range);
+      const inter = ch.range.intersection(scope.range);
       inter &&
         console.log(
           `Warning: refusing to append scope ${scope.range} because it overlaps with the child ${ch.range}.`
@@ -111,10 +110,10 @@ export class Scope implements ScopeNode {
   /**
    * Get the smallest scope that contains the given range.
    */
-  queryRange(range: monaco.Range): Scope | undefined {
+  queryRange(range: Range): Scope | undefined {
     // By the invariant, if this scope doesn't contain the range then neither its children do
     // You might want to generalize this for a predicate
-    if (!this.range.strictContainsRange(range)) return;
+    if (!strictContainsRange(this.range, range)) return;
 
     return this.children.reduce(
       (result, ch) => ch.queryRange(range) || result,
@@ -126,7 +125,7 @@ export class Scope implements ScopeNode {
    * Search for a name's definition in the scope or in its ancestors.
    */
   queryName(name: LocatedName): Definition | undefined {
-    if (!this.range.strictContainsRange(name.location)) return;
+    if (!strictContainsRange(this.range, name.location)) return;
 
     return this.names.get(name.name) || this.parent?.queryName(name);
   }
@@ -147,10 +146,10 @@ export class ScopeVisitor {
   public definitions = new Set<Definition>();
 
   /** Cache for variables references */
-  private variablesRefs = new Map<LocatedName, monaco.IRange>();
+  private variablesRefs = new Map<LocatedName, Range>();
 
   /** Cache for function references */
-  private functionsRefs = new Map<LocatedName, monaco.IRange | undefined>();
+  private functionsRefs = new Map<LocatedName, Range | undefined>();
 
   private globalScope?: Scope;
   private activeScope?: Scope;
@@ -158,7 +157,7 @@ export class ScopeVisitor {
   /** Save the current scope and perform some work in a child scope */
   private inScope(
     work: () => any,
-    range: monaco.Range,
+    range: Range,
     label = this.activeScope?.label
   ) {
     // work in a new scope
@@ -176,7 +175,7 @@ export class ScopeVisitor {
   /**
    * Get an array of suggestions for a given location in the code.
    */
-  queryCompletions(range: monaco.Range): Definition[] {
+  queryCompletions(range: Range): Definition[] {
     const scope = this.globalScope?.queryRange(range);
 
     let defs: Map<string, Definition> = new Map();
@@ -204,9 +203,7 @@ export class ScopeVisitor {
       ([ref]) =>
         ref.name === searchName.name &&
         ref.location &&
-        (searchName.location as monaco.Range).containsRange(
-          ref.location as monaco.Range
-        )
+        searchName.location.contains(ref.location)
     );
 
     if (def && def[1]) {
@@ -214,11 +211,7 @@ export class ScopeVisitor {
 
       // filter all the references with the same definition
       let refs = allRefs
-        .filter(
-          ([_ref, otherDef]) =>
-            otherDef &&
-            (defRange as monaco.Range).containsRange(otherDef as monaco.Range)
-        )
+        .filter(([_ref, otherDef]) => otherDef && defRange.contains(otherDef))
         .map(([name]) => name.location);
 
       return { def: defRange, refs };
@@ -264,11 +257,7 @@ export class ScopeVisitor {
     this.definitions.clear();
 
     // reset the global scope
-    this.globalScope = new Scope(
-      ctx.location as monaco.Range,
-      undefined,
-      "global scope"
-    );
+    this.globalScope = new Scope(ctx.location, undefined, "global scope");
     this.activeScope = this.globalScope;
 
     ctx.toplevelStatements.forEach((decl) => this.toplevelStmt(decl));
@@ -309,7 +298,7 @@ export class ScopeVisitor {
         // visit the body
         this.stmtList(ctx.body);
       },
-      ctx.location as monaco.Range,
+      ctx.location,
       ctx.name.name
     );
   }
@@ -324,11 +313,7 @@ export class ScopeVisitor {
   }
 
   private blockStmt(ctx: BlockStatement) {
-    this.inScope(
-      () => this.stmtList(ctx.body),
-      ctx.location as monaco.Range,
-      "<block>"
-    );
+    this.inScope(() => this.stmtList(ctx.body), ctx.location, "<block>");
   }
 
   private retStmt(ctx: ReturnStatement) {

@@ -1,4 +1,4 @@
-import { fsplice } from "../utils";
+import { fsplice } from "./utils";
 import { MATH_API } from "./api";
 import { LocatedName } from "./loc_utils";
 import { ALIASES } from "./lexer";
@@ -12,7 +12,8 @@ import {
   VariableDeclarationStatement,
   type Statement,
 } from "./statements";
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 
 export const NoRuleApplies = new Error(
   "This object cannot be reduced any further."
@@ -61,7 +62,7 @@ export interface Value {
 }
 
 export interface ASTNode {
-  location: monaco.IRange;
+  location: Range;
   toString(level?: number): string;
 }
 
@@ -95,7 +96,7 @@ export class Nil implements Expression, Value {
 }
 
 export class Const implements Expression, Value {
-  constructor(public value: number, public location: monaco.IRange) {}
+  constructor(public value: number, public location: Range) {}
 
   get isValue(): boolean {
     return true;
@@ -136,7 +137,7 @@ export class UnaryExpression implements Expression {
   constructor(
     public op: UnaryOperator,
     public expr: Expression,
-    public location: monaco.IRange
+    public location: Range
   ) {}
 
   get isValue(): boolean {
@@ -164,7 +165,7 @@ export class BinaryExpression implements Expression {
   constructor(
     public lhs: Expression,
     public rhs: BinaryExprRhs[],
-    public location: monaco.IRange
+    public location: Range
   ) {}
 
   get isValue(): boolean {
@@ -211,7 +212,7 @@ export class AssignmentExpression implements Expression {
   constructor(
     public names: AssignmentExprLhs[],
     public expr: Expression,
-    public location: monaco.IRange
+    public location: Range
   ) {}
 
   get isValue(): boolean {
@@ -279,7 +280,7 @@ export class CallExpression implements Expression {
   constructor(
     public name: LocatedName,
     public args: Expression[],
-    public location: monaco.IRange
+    public location: Range
   ) {}
 
   get isValue(): boolean {

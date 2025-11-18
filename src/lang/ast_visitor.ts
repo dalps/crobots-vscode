@@ -1,6 +1,7 @@
 import type { CstNode, CstNodeLocation } from "chevrotain";
-import * as monaco from "monaco-editor";
-import { zip } from "../utils";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
+import { zip } from "./utils";
 import * as cst_parser from "./cst_parser";
 import type * as cst_types from "./cst_parser_visitor";
 import {
@@ -34,7 +35,7 @@ import {
 type Maybe<T> = T | undefined;
 
 function rangeOfCstNodeLocation(loc: CstNodeLocation) {
-  return new monaco.Range(
+  return new Range(
     loc.startLine!,
     loc.startColumn!,
     loc.endLine!,
@@ -105,7 +106,7 @@ export default class ASTVisitor
         name,
         params,
         body,
-        (name.location as monaco.Range).plusRange(mkRange(rbrace)),
+        name.location.union(mkRange(rbrace)),
         doc
       )
     );
@@ -168,7 +169,7 @@ export default class ASTVisitor
         condition,
         thenBranch,
         elseBranch,
-        mkRange(ifKw).plusRange(elseBranch?.location || thenBranch.location)
+        mkRange(ifKw).union(elseBranch?.location || thenBranch.location)
       )
     );
   }
@@ -185,7 +186,7 @@ export default class ASTVisitor
       new WhileStatement(
         condition,
         body,
-        mkRange(whileKw).plusRange(
+        mkRange(whileKw).union(
           rangeOfCstNodeLocation(ctx.statement?.at(0).location)
         )
       )
@@ -213,7 +214,7 @@ export default class ASTVisitor
     return (
       semi &&
       expr &&
-      new ExpressionStatement(expr, mkRange(semi).plusRange(expr.location))
+      new ExpressionStatement(expr, mkRange(semi).union(expr.location))
     );
   }
 
@@ -240,7 +241,7 @@ export default class ASTVisitor
         new UnaryExpression(
           op.tokenType.name as UnaryOperator,
           expr,
-          mkRange(op).plusRange(expr.location)
+          mkRange(op).union(expr.location)
         )) ||
       expr
     );
@@ -288,9 +289,9 @@ export default class ASTVisitor
       (names &&
         expr &&
         names.reduce(
-          (acc, name) => (name ? acc.plusRange(name.name.location) : acc),
-          expr.location as monaco.Range
-        )) ||
+          (acc, name) => (name ? acc.union(name.name.location) : acc),
+          expr.location
+union ||
       DUMMY;
 
     return (
@@ -311,7 +312,7 @@ export default class ASTVisitor
       new AssignmentExpression(
         [{ op: op.tokenType.name === "INCR" ? "ADD" : "MINUS", name }],
         new Const(1, name.location),
-        mkRange(op).plusRange(name.location)
+        mkRange(op).union(name.location)
       )
     );
   }
@@ -341,11 +342,7 @@ export default class ASTVisitor
       name &&
       args &&
       rparen &&
-      new CallExpression(
-        name,
-        args,
-        (name.location as monaco.Range).plusRange(mkRange(rparen))
-      )
+      new CallExpression(name, args, name.location.union(mkRange(rparen)))
     );
   }
 

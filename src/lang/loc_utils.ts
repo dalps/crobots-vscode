@@ -1,16 +1,17 @@
 import { type IToken } from "chevrotain";
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 
-export const DUMMY = new monaco.Range(0, 0, 0, 0);
+export const DUMMY = new Range(0, 0, 0, 0);
 
-export function mkRange(start: IToken, end?: IToken) {
+export function mkRange(start: IToken, end?: IToken): Range {
   if (end) {
-    const startPos = new monaco.Position(start.startLine!, start.startColumn!);
-    const endPos = new monaco.Position(end.endLine!, end.endColumn!);
-    return monaco.Range.fromPositions(startPos, endPos);
+    const startPos = new Position(start.startLine!, start.startColumn!);
+    const endPos = new Position(end.endLine!, end.endColumn!);
+    return new Range(startPos, endPos);
   }
 
-  return new monaco.Range(
+  return new Range(
     start.startLine!,
     start.startColumn!,
     start.endLine!,
@@ -20,7 +21,7 @@ export function mkRange(start: IToken, end?: IToken) {
 
 export function mkStrictRange(start: IToken, end?: IToken) {
   if (end) {
-    return new monaco.Range(
+    return new Range(
       start.startLine!,
       start.endColumn! + 1,
       end.endLine!,
@@ -28,7 +29,7 @@ export function mkStrictRange(start: IToken, end?: IToken) {
     );
   }
 
-  return new monaco.Range(
+  return new Range(
     start.startLine!,
     start.endColumn!,
     start.endLine!,
@@ -38,7 +39,7 @@ export function mkStrictRange(start: IToken, end?: IToken) {
 
 export interface LocatedName {
   name: string;
-  location: monaco.IRange;
+  location: Range;
 }
 
 export class LocatedName implements LocatedName {
@@ -47,9 +48,12 @@ export class LocatedName implements LocatedName {
     return new LocatedName(tok.image, range);
   }
 
-  constructor(public name: string, public location: monaco.IRange) {}
+  constructor(public name: string, public location: Range) {}
 
   toString() {
     return `${this.name}${this.location}`;
   }
 }
+
+export const strictContainsRange = (r1: Range, r2: Range) =>
+  !r1.isEqual(r2) && r1.contains(r2);

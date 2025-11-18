@@ -1,7 +1,8 @@
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 import { API_SPEC } from "./api";
 
-export const ROBOT_CONF: monaco.languages.LanguageConfiguration = {
+export const ROBOT_CONF: vscode.LanguageConfiguration = {
   brackets: [
     ["{", "}"],
     ["[", "]"],
@@ -31,7 +32,7 @@ export const ROBOT_CONF: monaco.languages.LanguageConfiguration = {
       beforeText: new RegExp("^.*\\{[^\\}]*$"),
       afterText: new RegExp("^\\s*\\}.*$"),
       action: {
-        indentAction: monaco.languages.IndentAction.IndentOutdent,
+        indentAction: vscode.IndentAction.IndentOutdent,
         appendText: "\t",
       },
     },
@@ -39,7 +40,7 @@ export const ROBOT_CONF: monaco.languages.LanguageConfiguration = {
       beforeText: /^.*\{[^\}]*$/m,
       afterText: /^\s*\}.*$/m,
       action: {
-        indentAction: monaco.languages.IndentAction.Indent,
+        indentAction: vscode.IndentAction.Indent,
       },
     },
     {
@@ -47,7 +48,7 @@ export const ROBOT_CONF: monaco.languages.LanguageConfiguration = {
       beforeText: /^\s*\/\*\*(?!\/)([^\*]|\*(?!\/))*$/,
       afterText: /^\s*\*\/$/,
       action: {
-        indentAction: monaco.languages.IndentAction.IndentOutdent,
+        indentAction: vscode.IndentAction.IndentOutdent,
         appendText: " * ",
       },
     },
@@ -55,7 +56,7 @@ export const ROBOT_CONF: monaco.languages.LanguageConfiguration = {
       // e.g. /** ...|
       beforeText: /^\s*\/\*\*(?!\/)([^\*]|\*(?!\/))*$/,
       action: {
-        indentAction: monaco.languages.IndentAction.None,
+        indentAction: vscode.IndentAction.None,
         appendText: " * ",
       },
     },
@@ -63,7 +64,7 @@ export const ROBOT_CONF: monaco.languages.LanguageConfiguration = {
       // e.g.  * ...|
       beforeText: /^(\t|(\ \ ))*\ \*(\ ([^\*]|\*(?!\/))*)?$/,
       action: {
-        indentAction: monaco.languages.IndentAction.None,
+        indentAction: vscode.IndentAction.None,
         appendText: "* ",
       },
     },
@@ -71,7 +72,7 @@ export const ROBOT_CONF: monaco.languages.LanguageConfiguration = {
       // e.g.  */|
       beforeText: /^(\t|(\ \ ))*\ \*\/\s*$/,
       action: {
-        indentAction: monaco.languages.IndentAction.None,
+        indentAction: vscode.IndentAction.None,
         removeText: 1,
       },
     },
@@ -104,7 +105,7 @@ export const KEYWORDS = [
 export const INTRINSICS = Object.keys(API_SPEC);
 export const IDE_REGEX = /[a-zA-Z_][\w_]*/;
 
-export const ROBOT_LANG: monaco.languages.IMonarchLanguage = {
+export const ROBOT_LANG = {
   defaultToken: "invalid",
   tokenPostfix: ".r",
 
