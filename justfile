@@ -4,7 +4,7 @@ common_opts := "--format=cjs --platform=node --bundle --external:vscode --outfil
 default: build
 
 build:
-  esbuild {{entrypoints}} {{common_opts}} --minify
+  esbuild {{entrypoints}} {{common_opts}} --sourcemap
 
 watch:
   esbuild {{entrypoints}} {{common_opts}} --sourcemap --watch

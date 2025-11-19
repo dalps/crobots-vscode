@@ -1,7 +1,7 @@
-import type { CstNode, CstNodeLocation } from "chevrotain";
+import type { CstNode, CstNodeLocation, ParserMethod } from "chevrotain";
 import * as vscode from "vscode";
 import { Position, Range } from "vscode";
-import { zip } from "./utils";
+import { LOG, zip } from "./utils";
 import * as cst_parser from "./cst_parser";
 import type * as cst_types from "./cst_parser_visitor";
 import {
@@ -247,7 +247,9 @@ export default class ASTVisitor
     );
   }
 
-  binaryLeftAssocExpr(ctx: BinaryLeftAssocExprChildren): Maybe<Expression> {
+  binaryLeftAssocExpr(
+    ctx: cst_types.BinaryLeftAssocExprChildren
+  ): Maybe<Expression> {
     // base case
     if (ctx.lhs === undefined) {
       // ctx will be an empty object in case of missing syntax
@@ -354,23 +356,23 @@ export default class ASTVisitor
 
 export const defaultVisitor = new ASTVisitor();
 
-export function parse(input: string, rule: string) {
+export function parse<T>(
+  input: string,
+  rule: ParserMethod<any, CstNode>
+): Maybe<T> {
   const { cst, errors } = cst_parser.parse(input, rule);
 
-  // there should be errors of another kind in this phase as well
-  const ast = defaultVisitor.visit(cst);
-
-  return ast;
+  // TODO: report compilation errors here
+  return defaultVisitor.visit<T>(cst);
 }
 
-export function parseExpression(input: string): Expression {
-  return parse(input, "expression");
-}
+const { PARSER: P } = cst_parser;
 
-export function parseStatement(input: string): Statement {
-  return parse(input, "statement");
-}
+export const parseExpression = (input: string) =>
+  parse<Expression>(input, P.expression.bind(P));
 
-export function parseProgram(input: string): Program {
-  return parse(input, "program");
-}
+export const parseStatement = (input: string) =>
+  parse<Statement>(input, P.statement.bind(P));
+
+export const parseProgram = (input: string) =>
+  parse<Program>(input, P.program.bind(P));

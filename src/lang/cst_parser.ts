@@ -224,6 +224,7 @@ export function parse(
   const lexResult = LEXER.tokenize(input);
 
   PARSER.input = lexResult.tokens;
+  LOG(`Invoking parser rule: ${rule} ${typeof rule}`);
   const cst = rule();
 
   LOG(lexResult.tokens);
