@@ -1,4 +1,4 @@
-import { DEG2RAD, normalizeDegrees, RAD2DEG } from "../utils/MathUtils";
+import { DEG2RAD, normalizeDegrees, RAD2DEG } from "./MathUtils";
 
 export interface APICall {
   params: { name: string; descr?: string }[];

@@ -1,10 +1,12 @@
 import {
   CstParser,
   generateCstDts,
+  ParserMethod,
   type CstNode,
   type IRecognitionException,
 } from "chevrotain";
 import { CATEGORIES as C, DocString, LEXER, TOKENS as T } from "./lexer";
+import { LOG } from "./utils";
 
 export class CRobotsParser extends CstParser {
   constructor() {
@@ -217,40 +219,35 @@ export const PARSER = new CRobotsParser();
 
 export function parse(
   input: string,
-  rule: keyof typeof PARSER
+  rule: ParserMethod<any, CstNode>
 ): { cst: CstNode; errors: IRecognitionException[] } {
   const lexResult = LEXER.tokenize(input);
 
   PARSER.input = lexResult.tokens;
-  const cst = PARSER[rule]();
+  const cst = rule();
 
-  // console.log(lexResult.tokens);
-  // console.log(cst);
+  LOG(lexResult.tokens);
+  LOG(cst);
 
-  // if (PARSER.errors.length > 0) {
-  //   console.log(
-  //     "There are parsing errors!\n" +
-  //       PARSER.errors.map(
-  //         ({ message, token }, i) =>
-  //           `[${i}]: at line ${token.startLine} columns ${token.startColumn}-${token.endColumn}, ${message}\n`
-  //       )
-  //   );
-  // }
+  if (PARSER.errors.length > 0) {
+    LOG(
+      "There are parsing errors!\n" +
+        PARSER.errors.map(
+          ({ message, token }, i) =>
+            `[${i}]: at line ${token.startLine} columns ${token.startColumn}-${token.endColumn}, ${message}\n`
+        )
+    );
+  }
 
   return { cst, errors: PARSER.errors };
 }
 
-export function parseExpression(input: string) {
-  return parse(input, "expression");
-}
+export const parseExpression = (input: string) =>
+  parse(input, PARSER.expression);
 
-export function parseStatement(input: string) {
-  return parse(input, "statement");
-}
+export const parseStatement = (input: string) => parse(input, PARSER.statement);
 
-export function parseProgram(input: string) {
-  return parse(input, "program");
-}
+export const parseProgram = (input: string) => parse(input, PARSER.program);
 
 export function generateSignatures() {
   const productions = PARSER.getGAstProductions();

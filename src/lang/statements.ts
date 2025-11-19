@@ -1,4 +1,5 @@
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 import type { LocatedName } from "./loc_utils";
 import { NoRuleApplies, type ASTNode, type Expression } from "./expression";
 import { State } from "./state";
@@ -102,7 +103,7 @@ function StatementResult(stmt: Statement): StatementResult {
 }
 
 export class EmptyStatement implements Statement {
-  constructor(public location: monaco.IRange) {}
+  constructor(public location: Range) {}
 
   step(): StatementStepResult {
     return StateResult();
@@ -118,7 +119,7 @@ export class IfStatement implements Statement {
     public condition: Expression,
     public thenBranch: Statement,
     public elseBranch?: Statement,
-    public location: monaco.IRange
+    public location: Range
   ) {}
 
   step(st: State): StatementStepResult {
@@ -157,7 +158,7 @@ export class WhileStatement implements Statement {
   constructor(
     public condition: Expression,
     public body: Statement,
-    public location: monaco.IRange
+    public location: Range
   ) {}
 
   step(_st: State): StatementStepResult {
@@ -190,7 +191,7 @@ export class WhileExecution implements Statement {
 }
 
 export class ExpressionStatement implements Statement {
-  constructor(public expr: Expression, public location: monaco.IRange) {}
+  constructor(public expr: Expression, public location: Range) {}
 
   step(st: State): StatementStepResult {
     return this.expr.isValue
@@ -204,7 +205,7 @@ export class ExpressionStatement implements Statement {
 }
 
 export class BlockStatement implements Statement {
-  constructor(public body: Statement[], public location: monaco.IRange) {}
+  constructor(public body: Statement[], public location: Range) {}
 
   step(st: State): StatementStepResult {
     st.save();
@@ -248,10 +249,7 @@ export class BlockExecution implements Statement {
 }
 
 export class ReturnStatement implements Statement {
-  constructor(
-    public expr: Expression | undefined,
-    public location: monaco.IRange
-  ) {}
+  constructor(public expr: Expression | undefined, public location: Range) {}
 
   step(st: State): StatementStepResult {
     if (this.expr) {
@@ -269,10 +267,7 @@ export class ReturnStatement implements Statement {
 }
 
 export class VariableDeclarationStatement implements Statement {
-  constructor(
-    public declarations: Declaration[],
-    public location: monaco.IRange
-  ) {}
+  constructor(public declarations: Declaration[], public location: Range) {}
 
   step(st: State): StatementStepResult {
     const needsStep = this.declarations.findIndex(
@@ -313,7 +308,7 @@ export class FunctionDeclarationStatement implements Statement {
     public name: LocatedName,
     public params: LocatedName[],
     public body: Statement[],
-    public location: monaco.IRange,
+    public location: Range,
     public doc?: string
   ) {}
 
@@ -339,7 +334,7 @@ export class SequenceStatement implements Statement {
   constructor(
     public left: Statement,
     public right: Statement,
-    public location: monaco.IRange
+    public location: Range
   ) {}
 
   step(st: State): StatementStepResult {

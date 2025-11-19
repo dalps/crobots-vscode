@@ -1,4 +1,5 @@
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 import type { RobotAPI } from "./api";
 import {
   type ASTNode,
@@ -22,15 +23,15 @@ export class Program implements ASTNode {
   public trace: Expression[] = [];
   public toplevel: Statement;
   public initialState: State;
-  public location: monaco.IRange;
+  public location: Range;
 
   constructor(public toplevelStatements: Statement[]) {
     this.toplevel = SequenceStatement.from(toplevelStatements);
     this.initialState = State.fresh();
 
     this.location = toplevelStatements.reduce(
-      (acc, stmt) => acc.plusRange(stmt.location),
-      new monaco.Range(0, 0, 0, 0)
+      (acc, stmt) => acc.union(stmt.location),
+      new Range(0, 0, 0, 0)
     );
   }
 

@@ -53,7 +53,7 @@ export default class ASTVisitor
   }
 
   override visit<OUT>(cstNode: Maybe<CstNode | CstNode[]>): Maybe<OUT> {
-    return super.visit(cstNode);
+    return cstNode && super.visit(cstNode);
   }
 
   visitList<OUT>(list: Maybe<CstNode[]>): Maybe<OUT>[] {
@@ -265,8 +265,8 @@ export default class ASTVisitor
       (lhs &&
         rhs &&
         rhs.reduce(
-          (acc, rhs) => (rhs ? acc.plusRange(rhs.expr.location) : acc),
-          lhs.location as monaco.Range
+          (acc, rhs) => (rhs ? acc.union(rhs.expr.location) : acc),
+          lhs.location as Range
         )) ||
       DUMMY;
 
@@ -286,13 +286,12 @@ export default class ASTVisitor
     let expr = ctx.rhs && this.binaryLeftAssocExpr(ctx.rhs[0].children);
 
     let namesRange =
-      (names &&
-        expr &&
-        names.reduce(
-          (acc, name) => (name ? acc.union(name.name.location) : acc),
-          expr.location
-union ||
-      DUMMY;
+      names &&
+      expr &&
+      names.reduce(
+        (acc, name) => (name ? acc.union(name.name.location) : acc),
+        expr.location || DUMMY
+      );
 
     return (
       expr &&

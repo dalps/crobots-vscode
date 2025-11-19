@@ -27,3 +27,31 @@ export function fsplice<T>(
   newArr.splice(start, deleteCount, ...items);
   return newArr;
 }
+
+export const StackIsEmpty = new Error("The stack is empty.");
+
+export class Stack<T> {
+  protected stack: T[] = [];
+
+  get top(): T {
+    const top = this.stack.at(-1);
+    if (!top) throw StackIsEmpty;
+    return top;
+  }
+
+  push(env: T) {
+    this.stack.push(env);
+  }
+
+  pop(): T | undefined {
+    return this.stack.pop();
+  }
+
+  clear() {
+    this.stack = [];
+  }
+}
+
+export function LOG(...msg: any[]) {
+  console.log(...msg);
+}

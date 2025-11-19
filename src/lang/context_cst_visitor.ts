@@ -1,7 +1,8 @@
 import { Context, ContextKind } from "./context";
 import * as cst_parser from "./cst_parser";
 import * as types from "./cst_parser_visitor";
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 import { mkRange, mkStrictRange } from "./loc_utils";
 
 /**
@@ -21,7 +22,7 @@ export default class ContextVisitor
   extends cst_parser.CRobotsCSTVisitor
   implements types.ICstNodeVisitor<void, Context>
 {
-  program(ctx: types.ProgramCstChildren, range: monaco.Range): Context {
+  program(ctx: types.ProgramCstChildren, range: Range): Context {
     return new Context(
       ContextKind.Statement,
       range,

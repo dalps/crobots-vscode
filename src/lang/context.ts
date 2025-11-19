@@ -1,4 +1,5 @@
-import * as monaco from "monaco-editor";
+import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 import { DUMMY } from "./loc_utils";
 
 export enum ContextKind {
@@ -20,7 +21,7 @@ export function stringOfContextKind(kind: ContextKind) {
 
 interface ContextData {
   kind: ContextKind;
-  range?: monaco.Range;
+  range?: Range;
   label?: string;
 }
 
@@ -42,7 +43,7 @@ export class Context implements ContextNode {
 
   constructor(
     public kind: ContextKind,
-    public range: monaco.Range,
+    public range: Range,
     public parent?: Context,
     public label?: string
   ) {}
@@ -62,7 +63,7 @@ export class Context implements ContextNode {
 
     // enlarge the parent's range
     this.range =
-      (this.range && scope.range && this.range.plusRange(scope.range)) ||
+      (this.range && scope.range && this.range.union(scope.range)) ||
       this.range ||
       scope.range ||
       DUMMY;
@@ -79,10 +80,10 @@ export class Context implements ContextNode {
   /**
    * Get the smallest node that contains the given range.
    */
-  queryRange(range: monaco.Range): Context | undefined {
+  queryRange(range: Range): Context | undefined {
     console.log(`querying ` + this.label);
-    
-    if (!this.range?.containsRange(range)) return;
+
+    if (!this.range?.contains(range)) return;
 
     return this.children.reduce(
       (result, ch) => ch.queryRange(range) || result,

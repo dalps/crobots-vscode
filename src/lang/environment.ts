@@ -1,4 +1,4 @@
-import { Stack } from "../utils/Stack";
+import { Stack } from "./utils";
 import type { Identifier, Parameter } from "./expression";
 import type { Statement } from "./statements";
 
