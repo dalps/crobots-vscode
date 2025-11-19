@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { Position, Range } from "vscode";
-import { DUMMY } from "./loc_utils";
+import { Position } from "vscode";
+import { EMPTY_RANGE, Range } from "./loc_utils";
 
 export enum ContextKind {
   Statement,
@@ -66,7 +66,7 @@ export class Context implements ContextNode {
       (this.range && scope.range && this.range.union(scope.range)) ||
       this.range ||
       scope.range ||
-      DUMMY;
+      EMPTY_RANGE;
     this.children.push(scope);
 
     return this;

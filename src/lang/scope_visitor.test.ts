@@ -1,8 +1,8 @@
-import { Range } from "monaco-editor";
 import { expect, test } from "vitest";
+import { Range } from "vscode";
 import { parseProgram } from "./ast_visitor";
-import { defaultVisitor as scopeVisitor } from "./scope_visitor";
 import { LocatedName } from "./loc_utils";
+import { defaultVisitor as scopeVisitor } from "./scope_visitor";
 import type {
   FunctionDeclarationStatement,
   VariableDeclarationStatement,

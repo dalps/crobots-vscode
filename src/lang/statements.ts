@@ -1,7 +1,6 @@
-import * as vscode from "vscode";
-import { Position, Range } from "vscode";
-import type { LocatedName } from "./loc_utils";
+import { Range } from "vscode";
 import { NoRuleApplies, type ASTNode, type Expression } from "./expression";
+import type { LocatedName } from "./loc_utils";
 import { State } from "./state";
 
 export interface Statement extends ASTNode {

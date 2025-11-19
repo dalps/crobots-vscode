@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { Position, Range } from "vscode";
 import type { CompletionItem } from "vscode";
 import { ROBOT_CONF, ROBOT_LANG } from "./crobots.contribution";
 import { API_SPEC } from "../lang/api";
@@ -11,11 +12,12 @@ import { LocatedName } from "../lang/loc_utils";
 import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { ContextKind, stringOfContextKind } from "../lang/context";
 import { parseProgram as parseCst } from "../lang/cst_parser";
+import { LOG } from "./utils";
 
 export const LANG_ID = "crobots";
 export const THEME_ID = "robotTheme";
 
-const { SymbolKind, CompletionItemKind, Range, Position } = vscode;
+const { SymbolKind, CompletionItemKind } = vscode;
 
 // vscode.languages.setMonarchTokensProvider(LANG_ID, ROBOT_LANG);
 
@@ -104,6 +106,10 @@ export function getApiCompletions(range: vscode.Range): CompletionItem[] {
 }
 
 export function init() {
+  Range.toString = function (this: vscode.Range) {
+    return `[${this.start.line}:${this.start.character}-${this.end.line}:${this.end.character}]`;
+  };
+
   vscode.languages.registerCompletionItemProvider(LANG_ID, {
     provideCompletionItems(document, position, token, context) {
       let { range, word } = getWordAtPosition(document, position);

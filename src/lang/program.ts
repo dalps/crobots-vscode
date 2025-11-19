@@ -1,5 +1,4 @@
-import * as vscode from "vscode";
-import { Position, Range } from "vscode";
+import { Range } from "vscode";
 import type { RobotAPI } from "./api";
 import {
   type ASTNode,
@@ -7,6 +6,7 @@ import {
   ENTRY_POINT,
   traceExpression,
 } from "./expression";
+import { } from "./loc_utils";
 import { State } from "./state";
 import {
   type Statement,

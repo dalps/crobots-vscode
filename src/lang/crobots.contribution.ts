@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Position, Range } from "vscode";
+import { Position } from "vscode";
 import { API_SPEC } from "./api";
 
 export const ROBOT_CONF: vscode.LanguageConfiguration = {

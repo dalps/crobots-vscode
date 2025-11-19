@@ -19,6 +19,7 @@ import {
   WhileStatement,
   type Statement,
 } from "./statements";
+import { LOG } from "./utils";
 
 type SymbolKind = vscode.SymbolKind.Function | vscode.SymbolKind.Variable;
 
@@ -61,7 +62,9 @@ export class Scope implements ScopeNode {
     public range: Range,
     public parent?: Scope,
     public label?: string
-  ) {}
+  ) {
+    LOG(`New scope: ${this}`);
+  }
 
   visitUp(visitor: (child: ScopeData) => void) {
     visitor({ names: this.names, label: this.label, range: this.range });

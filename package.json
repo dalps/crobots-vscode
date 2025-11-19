@@ -36,8 +36,8 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "just build",
+    "vscode:prepublish": "npm run build",
+    "build": "just build",
     "lint": "eslint",
     "watch": "just watch"
   },

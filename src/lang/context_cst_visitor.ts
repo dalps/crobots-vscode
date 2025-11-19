@@ -3,7 +3,7 @@ import * as cst_parser from "./cst_parser";
 import * as types from "./cst_parser_visitor";
 import * as vscode from "vscode";
 import { Position, Range } from "vscode";
-import { mkRange, mkStrictRange } from "./loc_utils";
+import { fromTokens, fromTokensStrict } from "./loc_utils";
 
 /**
  * Places where an expression context should be reported:
@@ -64,7 +64,7 @@ export default class ContextVisitor
   functionStmt(ctx: types.FunctionStmtCstChildren): Context {
     let res = new Context(
       ContextKind.Statement,
-      mkRange(ctx.identifier[0].children.IDE[0]),
+      fromTokens(ctx.identifier[0].children.IDE[0]),
       undefined,
       "function"
     );
@@ -72,7 +72,7 @@ export default class ContextVisitor
     res.appendChild(
       new Context(
         ContextKind.Identifier,
-        mkRange(ctx.LPAREN[0], ctx.RPAREN[0]),
+        fromTokens(ctx.LPAREN[0], ctx.RPAREN[0]),
         undefined,
         "params"
       )
@@ -89,7 +89,7 @@ export default class ContextVisitor
 
     let res = new Context(
       ContextKind.Statement,
-      mkRange(intTok, semiTok),
+      fromTokens(intTok, semiTok),
       undefined,
       "variable"
     );
@@ -98,7 +98,7 @@ export default class ContextVisitor
       res.appendChild(
         new Context(
           ContextKind.Identifier,
-          mkStrictRange(intTok, semiTok),
+          fromTokensStrict(intTok, semiTok),
           undefined,
           `identifier_0`
         )
@@ -113,7 +113,7 @@ export default class ContextVisitor
         res.appendChild(
           new Context(
             ContextKind.Identifier,
-            mkStrictRange(ideStart, ideEnd),
+            fromTokensStrict(ideStart, ideEnd),
             undefined,
             `identifier_${idx}`
           )
@@ -126,7 +126,7 @@ export default class ContextVisitor
           res.appendChild(
             new Context(
               ContextKind.Expression,
-              mkStrictRange(exprStart, exprEnd),
+              fromTokensStrict(exprStart, exprEnd),
               undefined,
               `expression_${idx}`
             )
@@ -140,7 +140,7 @@ export default class ContextVisitor
   blockStmt(ctx: types.BlockStmtCstChildren): Context {
     let res = new Context(
       ContextKind.Statement,
-      mkRange(ctx.LBRACE[0], ctx.RBRACE[0]),
+      fromTokens(ctx.LBRACE[0], ctx.RBRACE[0]),
       undefined,
       "block"
     );
@@ -153,7 +153,7 @@ export default class ContextVisitor
   retStmt(ctx: types.RetStmtCstChildren): Context {
     let res = new Context(
       ContextKind.Statement,
-      mkRange(ctx.RETURN[0]),
+      fromTokens(ctx.RETURN[0]),
       undefined,
       "return"
     );
@@ -161,7 +161,7 @@ export default class ContextVisitor
     res.appendChild(
       new Context(
         ContextKind.Expression,
-        mkRange(ctx.RETURN[0], ctx.SEMICOLON[0]),
+        fromTokens(ctx.RETURN[0], ctx.SEMICOLON[0]),
         undefined,
         "retExpr"
       )
@@ -173,7 +173,7 @@ export default class ContextVisitor
   ifStmt(ctx: types.IfStmtCstChildren): Context {
     let res = new Context(
       ContextKind.Statement,
-      mkRange(ctx.IF[0]),
+      fromTokens(ctx.IF[0]),
       undefined,
       "if"
     );
@@ -181,7 +181,7 @@ export default class ContextVisitor
     res.appendChild(
       new Context(
         ContextKind.Expression,
-        mkRange(ctx.LPAREN[0], ctx.RPAREN[0]),
+        fromTokens(ctx.LPAREN[0], ctx.RPAREN[0]),
         undefined,
         "condition"
       )
@@ -199,7 +199,7 @@ export default class ContextVisitor
   whileStmt(ctx: types.WhileStmtCstChildren): Context {
     let res = new Context(
       ContextKind.Statement,
-      mkRange(ctx.WHILE[0]),
+      fromTokens(ctx.WHILE[0]),
       undefined,
       "while"
     );
@@ -207,7 +207,7 @@ export default class ContextVisitor
     res.appendChild(
       new Context(
         ContextKind.Expression,
-        mkRange(ctx.LPAREN[0], ctx.RPAREN[0]),
+        fromTokens(ctx.LPAREN[0], ctx.RPAREN[0]),
         undefined,
         "condition"
       )
@@ -222,7 +222,7 @@ export default class ContextVisitor
   doWhileStmt(ctx: types.DoWhileStmtCstChildren): Context {
     let res = new Context(
       ContextKind.Statement,
-      mkRange(ctx.DO[0]),
+      fromTokens(ctx.DO[0]),
       undefined,
       "doWhile"
     );
@@ -230,7 +230,7 @@ export default class ContextVisitor
     res.appendChild(
       new Context(
         ContextKind.Expression,
-        mkRange(ctx.LPAREN[0], ctx.RPAREN[0]),
+        fromTokens(ctx.LPAREN[0], ctx.RPAREN[0]),
         undefined,
         "condition"
       )
@@ -245,7 +245,7 @@ export default class ContextVisitor
   exprStmt(ctx: types.ExprStmtCstChildren): Context {
     let res = new Context(
       ContextKind.Statement,
-      mkRange(ctx.SEMICOLON[0]),
+      fromTokens(ctx.SEMICOLON[0]),
       undefined,
       "exprStmt"
     );
@@ -253,7 +253,7 @@ export default class ContextVisitor
     res.appendChild(
       new Context(
         ContextKind.Expression,
-        mkRange(ctx.SEMICOLON[0]),
+        fromTokens(ctx.SEMICOLON[0]),
         undefined,
         "expression"
       )

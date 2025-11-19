@@ -1,10 +1,8 @@
 import { type IToken } from "chevrotain";
 import * as vscode from "vscode";
-import { Position, Range } from "vscode";
+import { Range, Position } from "vscode";
 
-export const DUMMY = new Range(0, 0, 0, 0);
-
-export function mkRange(start: IToken, end?: IToken): Range {
+export function fromTokens(start: IToken, end?: IToken): Range {
   if (end) {
     const startPos = new Position(start.startLine!, start.startColumn!);
     const endPos = new Position(end.endLine!, end.endColumn!);
@@ -19,7 +17,7 @@ export function mkRange(start: IToken, end?: IToken): Range {
   );
 }
 
-export function mkStrictRange(start: IToken, end?: IToken) {
+export function fromTokensStrict(start: IToken, end?: IToken) {
   if (end) {
     return new Range(
       start.startLine!,
@@ -37,6 +35,11 @@ export function mkStrictRange(start: IToken, end?: IToken) {
   );
 }
 
+export const strictContainsRange = (r1: Range, r2: Range) =>
+  !r1.isEqual(r2) && r1.contains(r2);
+
+export const EMPTY_RANGE = new Range(0, 0, 0, 0);
+
 export interface LocatedName {
   name: string;
   location: Range;
@@ -44,7 +47,7 @@ export interface LocatedName {
 
 export class LocatedName implements LocatedName {
   static fromToken(tok: IToken) {
-    const range = mkRange(tok);
+    const range = fromTokens(tok);
     return new LocatedName(tok.image, range);
   }
 
@@ -54,6 +57,3 @@ export class LocatedName implements LocatedName {
     return `${this.name}${this.location}`;
   }
 }
-
-export const strictContainsRange = (r1: Range, r2: Range) =>
-  !r1.isEqual(r2) && r1.contains(r2);

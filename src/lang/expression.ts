@@ -1,6 +1,6 @@
 import { fsplice } from "./utils";
 import { MATH_API } from "./api";
-import { LocatedName } from "./loc_utils";
+import { LocatedName, Range } from "./loc_utils";
 import { ALIASES } from "./lexer";
 import type { BinaryOperator, UnaryOperator } from "./operators";
 import { BINARY_OPS, UNARY_OPS } from "./operators";
@@ -13,7 +13,7 @@ import {
   type Statement,
 } from "./statements";
 import * as vscode from "vscode";
-import { Position, Range } from "vscode";
+import { Position } from "vscode";
 
 export const NoRuleApplies = new Error(
   "This object cannot be reduced any further."

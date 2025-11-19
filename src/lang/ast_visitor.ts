@@ -1,7 +1,5 @@
 import type { CstNode, CstNodeLocation, ParserMethod } from "chevrotain";
-import * as vscode from "vscode";
-import { Position, Range } from "vscode";
-import { LOG, zip } from "./utils";
+import { Range } from "vscode";
 import * as cst_parser from "./cst_parser";
 import type * as cst_types from "./cst_parser_visitor";
 import {
@@ -11,11 +9,10 @@ import {
   Const,
   UnaryExpression,
   type AssignmentExprLhs,
-  type ASTNode,
   type BinaryExprRhs,
   type Expression,
 } from "./expression";
-import { DUMMY, LocatedName, mkRange } from "./loc_utils";
+import { EMPTY_RANGE, fromTokens, LocatedName } from "./loc_utils";
 import type { BinaryOperator, UnaryOperator } from "./operators";
 import { Program } from "./program";
 import {
@@ -31,6 +28,7 @@ import {
   type Declaration,
   type Statement,
 } from "./statements";
+import { zip } from "./utils";
 
 type Maybe<T> = T | undefined;
 
@@ -106,7 +104,7 @@ export default class ASTVisitor
         name,
         params,
         body,
-        name.location.union(mkRange(rbrace)),
+        name.location.union(fromTokens(rbrace)),
         doc
       )
     );
@@ -121,7 +119,7 @@ export default class ASTVisitor
       declarations &&
       new VariableDeclarationStatement(
         declarations,
-        mkRange(int, ctx.SEMICOLON?.at(0))
+        fromTokens(int, ctx.SEMICOLON?.at(0))
       )
     );
   }
@@ -143,7 +141,7 @@ export default class ASTVisitor
       lbrace &&
       body &&
       rbrace &&
-      new BlockStatement(body, mkRange(lbrace, rbrace))
+      new BlockStatement(body, fromTokens(lbrace, rbrace))
     );
   }
 
@@ -152,7 +150,9 @@ export default class ASTVisitor
     let expr = this.visit<Expression>(ctx.expression);
 
     // expr is not required
-    return ret && new ReturnStatement(expr, mkRange(ret, ctx.SEMICOLON?.at(0)));
+    return (
+      ret && new ReturnStatement(expr, fromTokens(ret, ctx.SEMICOLON?.at(0)))
+    );
   }
 
   ifStmt(ctx: cst_types.IfStmtCstChildren) {
@@ -169,7 +169,7 @@ export default class ASTVisitor
         condition,
         thenBranch,
         elseBranch,
-        mkRange(ifKw).union(elseBranch?.location || thenBranch.location)
+        fromTokens(ifKw).union(elseBranch?.location || thenBranch.location)
       )
     );
   }
@@ -186,7 +186,7 @@ export default class ASTVisitor
       new WhileStatement(
         condition,
         body,
-        mkRange(whileKw).union(
+        fromTokens(whileKw).union(
           rangeOfCstNodeLocation(ctx.statement?.at(0).location)
         )
       )
@@ -197,7 +197,7 @@ export default class ASTVisitor
     let doKw = ctx.DO?.at(0);
     let body = this.visit<Statement>(ctx.statement);
     let condition = this.visit<Expression>(ctx.expression);
-    let loc = doKw && mkRange(doKw, ctx.SEMICOLON?.at(0));
+    let loc = doKw && fromTokens(doKw, ctx.SEMICOLON?.at(0));
 
     return (
       doKw &&
@@ -214,13 +214,13 @@ export default class ASTVisitor
     return (
       semi &&
       expr &&
-      new ExpressionStatement(expr, mkRange(semi).union(expr.location))
+      new ExpressionStatement(expr, fromTokens(semi).union(expr.location))
     );
   }
 
   emptyStmt(ctx: cst_types.EmptyStmtCstChildren): Maybe<Statement> {
     let semi = ctx.SEMICOLON?.at(0);
-    return semi && new EmptyStatement(mkRange(semi));
+    return semi && new EmptyStatement(fromTokens(semi));
   }
 
   expression(ctx: cst_types.ExpressionCstChildren) {
@@ -241,7 +241,7 @@ export default class ASTVisitor
         new UnaryExpression(
           op.tokenType.name as UnaryOperator,
           expr,
-          mkRange(op).union(expr.location)
+          fromTokens(op).union(expr.location)
         )) ||
       expr
     );
@@ -270,7 +270,7 @@ export default class ASTVisitor
           (acc, rhs) => (rhs ? acc.union(rhs.expr.location) : acc),
           lhs.location as Range
         )) ||
-      DUMMY;
+      EMPTY_RANGE;
 
     return (
       lhs && (rhs.length > 0 ? new BinaryExpression(lhs, rhs, rhsRange) : lhs)
@@ -292,7 +292,7 @@ export default class ASTVisitor
       expr &&
       names.reduce(
         (acc, name) => (name ? acc.union(name.name.location) : acc),
-        expr.location || DUMMY
+        expr.location || EMPTY_RANGE
       );
 
     return (
@@ -313,7 +313,7 @@ export default class ASTVisitor
       new AssignmentExpression(
         [{ op: op.tokenType.name === "INCR" ? "ADD" : "MINUS", name }],
         new Const(1, name.location),
-        mkRange(op).union(name.location)
+        fromTokens(op).union(name.location)
       )
     );
   }
@@ -327,7 +327,7 @@ export default class ASTVisitor
   constExpr(ctx: cst_types.ConstExprCstChildren) {
     let lit = ctx.CONST?.at(0);
 
-    return lit && new Const(Number.parseInt(lit.image), mkRange(lit));
+    return lit && new Const(Number.parseInt(lit.image), fromTokens(lit));
   }
 
   groupExpr(ctx: cst_types.GroupExprCstChildren) {
@@ -343,7 +343,7 @@ export default class ASTVisitor
       name &&
       args &&
       rparen &&
-      new CallExpression(name, args, name.location.union(mkRange(rparen)))
+      new CallExpression(name, args, name.location.union(fromTokens(rparen)))
     );
   }
 
