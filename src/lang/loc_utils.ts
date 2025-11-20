@@ -3,36 +3,23 @@ import * as vscode from "vscode";
 import { Range, Position } from "vscode";
 
 export function fromTokens(start: IToken, end?: IToken): Range {
-  if (end) {
-    const startPos = new Position(start.startLine!, start.startColumn!);
-    const endPos = new Position(end.endLine!, end.endColumn!);
-    return new Range(startPos, endPos);
-  }
+  const startPos = new Position(start.startLine! - 1, start.startColumn! - 1);
+  const endPos = end
+    ? new Position(end.endLine! - 1, end.endColumn!) // end inclusive
+    : new Position(start.endLine! - 1, start.endColumn!);
 
-  return new Range(
-    start.startLine!,
-    start.startColumn!,
-    start.endLine!,
-    start.endColumn! + 1
-  );
+  return new Range(startPos, endPos);
 }
 
 export function fromTokensStrict(start: IToken, end?: IToken) {
-  if (end) {
-    return new Range(
-      start.startLine!,
-      start.endColumn! + 1,
-      end.endLine!,
-      end.startColumn!
-    );
-  }
+  const startCol = end ? start.endColumn! : start.endColumn! - 1;
+  const startPos = new Position(start.startLine! - 1, startCol);
 
-  return new Range(
-    start.startLine!,
-    start.endColumn!,
-    start.endLine!,
-    start.endColumn! + 1
-  );
+  const endPos = end
+    ? new Position(end.endLine! - 1, end.startColumn! - 1)
+    : new Position(start.endLine! - 1, start.endColumn!);
+
+  return new Range(startPos, endPos);
 }
 
 export const strictContainsRange = (r1: Range, r2: Range) =>

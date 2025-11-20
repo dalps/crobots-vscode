@@ -243,15 +243,18 @@ export function parse(
   return { cst, errors: PARSER.errors };
 }
 
+const P = PARSER;
+
 export const parseExpression = (input: string) =>
-  parse(input, PARSER.expression);
+  parse(input, P.expression.bind(P));
 
-export const parseStatement = (input: string) => parse(input, PARSER.statement);
+export const parseStatement = (input: string) =>
+  parse(input, P.statement.bind(P));
 
-export const parseProgram = (input: string) => parse(input, PARSER.program);
+export const parseProgram = (input: string) => parse(input, P.program.bind(P));
 
 export function generateSignatures() {
-  const productions = PARSER.getGAstProductions();
+  const productions = P.getGAstProductions();
   const dst = generateCstDts(productions);
 
   console.log(dst);

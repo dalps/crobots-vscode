@@ -152,10 +152,7 @@ export function init() {
     if (!location) return;
     let word = document.getText(location);
 
-    return {
-      location,
-      word,
-    };
+    return new LocatedName(word, location);
   }
 
   vscode.languages.registerDefinitionProvider(LANG_ID, {
@@ -168,6 +165,7 @@ export function init() {
 
       const definitionLoc = scopeVisitor.queryReferences(name);
 
+      LOG(`definition for ${name}: ${definitionLoc}`);
       return definitionLoc && { range: definitionLoc.def, uri: document.uri };
     },
   });
@@ -216,9 +214,7 @@ export function init() {
       scopeVisitor.program(ast);
 
       const queryRes = scopeVisitor.queryReferences(name);
-
-      if (!queryRes || document.isClosed) return;
-
+      if (!queryRes) return;
       const { refs } = queryRes;
 
       const edit = new vscode.WorkspaceEdit();
@@ -238,18 +234,10 @@ export function init() {
 
       const symbols: vscode.DocumentSymbol[] = [
         ...scopeVisitor.definitions.values(),
-      ].map(({ name: { word: name, location }, container, kind }) => {
-        return {
-          name,
-          containerName: container,
-          range: location,
-          detail: "",
-          tags: [],
-          selectionRange: location,
-          kind,
-          children: [],
-        };
-      });
+      ].map(
+        ({ name: { word: name, location }, container, kind }) =>
+          new vscode.DocumentSymbol(name, "", kind, location, location)
+      );
 
       return symbols;
     },
