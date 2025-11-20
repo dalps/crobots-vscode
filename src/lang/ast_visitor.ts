@@ -30,7 +30,7 @@ import {
 } from "./statements";
 import { zip } from "./utils";
 
-type Maybe<T> = T | undefined;
+export type Maybe<T> = T | undefined;
 
 function rangeOfCstNodeLocation(loc: CstNodeLocation) {
   return new Range(

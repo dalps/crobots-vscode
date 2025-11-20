@@ -7,7 +7,12 @@ import {
   UnaryExpression,
   type Expression,
 } from "./expression";
-import { LocatedName, strictContainsRange } from "./loc_utils";
+import {
+  LocatedName,
+  showPosition,
+  showRange,
+  strictContainsRange,
+} from "./loc_utils";
 import type { Program } from "./program";
 import {
   BlockStatement,
@@ -62,9 +67,7 @@ export class Scope implements ScopeNode {
     public range: Range,
     public parent?: Scope,
     public label?: string
-  ) {
-    LOG(`New scope: ${this}`);
-  }
+  ) {}
 
   visitUp(visitor: (child: ScopeData) => void) {
     visitor({ names: this.names, label: this.label, range: this.range });
@@ -78,7 +81,7 @@ export class Scope implements ScopeNode {
 
   addName(name: LocatedName, kind: SymbolKind): Definition {
     const def = { name, kind, container: this.label };
-    this.names.set(name.name, def);
+    this.names.set(name.word, def);
     return def;
   }
 
@@ -130,11 +133,11 @@ export class Scope implements ScopeNode {
   queryName(name: LocatedName): Definition | undefined {
     if (!strictContainsRange(this.range, name.location)) return;
 
-    return this.names.get(name.name) || this.parent?.queryName(name);
+    return this.names.get(name.word) || this.parent?.queryName(name);
   }
 
   toString(level = 0): string {
-    return `${"|   ".repeat(level)}${this.label}${this.range} { ${[
+    return `${"|   ".repeat(level)}${this.label}${showRange(this.range)} { ${[
       ...this.names.entries(),
     ]
       .map(([k, _v]) => `${k}`)
@@ -204,7 +207,7 @@ export class ScopeVisitor {
 
     let def = allRefs.find(
       ([ref]) =>
-        ref.name === searchName.name &&
+        ref.word === searchName.word &&
         ref.location &&
         searchName.location.contains(ref.location)
     );
@@ -232,7 +235,7 @@ export class ScopeVisitor {
 
     // set previous undefined references (bit of a hack)
     this.functionsRefs.forEach(
-      (_, k) => k.name === name.name && this.functionsRefs.set(k, name.location)
+      (_, k) => k.word === name.word && this.functionsRefs.set(k, name.location)
     );
 
     this.definitions.add(def);
@@ -265,7 +268,7 @@ export class ScopeVisitor {
 
     ctx.toplevelStatements.forEach((decl) => this.toplevelStmt(decl));
 
-    // console.log(`${this.globalScope}`);
+    LOG(`\n${this.globalScope}`);
   }
 
   private toplevelStmt(ctx: Statement) {
@@ -302,7 +305,7 @@ export class ScopeVisitor {
         this.stmtList(ctx.body);
       },
       ctx.location,
-      ctx.name.name
+      ctx.name.word
     );
   }
 
@@ -361,7 +364,7 @@ export class ScopeVisitor {
   }
 
   private callExpr(ctx: CallExpression) {
-    const { name: callName, location } = ctx.name;
+    const { word: callName, location } = ctx.name;
     const def = this.activeScope?.queryName(ctx.name);
 
     if (!def) {
@@ -387,7 +390,7 @@ export class ScopeVisitor {
   }
 
   private identifier(ctx: LocatedName) {
-    const { name: varName, location } = ctx;
+    const { word: varName, location } = ctx;
     const def = this.activeScope?.queryName(ctx);
 
     if (!def) {

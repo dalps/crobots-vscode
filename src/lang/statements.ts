@@ -278,7 +278,7 @@ export class VariableDeclarationStatement implements Statement {
 
       this.declarations.forEach(({ name, expr }) => {
         const init = expr?.eval(st);
-        st.defineVar(name.name, init);
+        st.defineVar(name.word, init);
       });
 
       return StateResult();
@@ -313,8 +313,8 @@ export class FunctionDeclarationStatement implements Statement {
 
   step(st: State): StatementStepResult {
     st.defineFunc(
-      this.name.name,
-      this.params.map(({ name }) => name),
+      this.name.word,
+      this.params.map(({ word: name }) => name),
       this.body
     );
     return StateResult();

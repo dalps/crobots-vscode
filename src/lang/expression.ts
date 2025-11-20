@@ -121,7 +121,7 @@ export class IdentifierExpression extends LocatedName implements Expression {
   }
 
   eval(st: State): number {
-    return st.readVar(this.name);
+    return st.readVar(this.word);
   }
 
   step(st: State): Expression {
@@ -129,7 +129,7 @@ export class IdentifierExpression extends LocatedName implements Expression {
   }
 
   toString(): string {
-    return this.name;
+    return this.word;
   }
 }
 
@@ -225,14 +225,14 @@ export class AssignmentExpression implements Expression {
 
       if (op) {
         // operator assignment
-        const prevValue = st.readVar(name.name);
+        const prevValue = st.readVar(name.word);
         newValue = BINARY_OPS[op](prevValue, acc);
       } else {
         // normal assignment
         newValue = acc;
       }
 
-      st.updateVar(name.name, newValue);
+      st.updateVar(name.word, newValue);
       return newValue;
     }, this.expr.eval(st));
   }
@@ -247,7 +247,7 @@ export class AssignmentExpression implements Expression {
 
       if (op) {
         // operator assignment
-        const prevValue = st.readVar(name.name);
+        const prevValue = st.readVar(name.word);
         newValue = BINARY_OPS[op](prevValue, rhs);
       } else {
         // normal assignment
@@ -256,7 +256,7 @@ export class AssignmentExpression implements Expression {
 
       const newRhs = new Const(newValue);
 
-      st.updateVar(name.name, newValue);
+      st.updateVar(name.word, newValue);
 
       if (newNames.length > 0) {
         return new AssignmentExpression(newNames, newRhs);
@@ -297,22 +297,22 @@ export class CallExpression implements Expression {
     if (needsStep < 0) {
       // all arguments are values
 
-      const cb = (st.api && st.api[this.name.name]) || MATH_API[this.name.name];
+      const cb = (st.api && st.api[this.name.word]) || MATH_API[this.name.word];
 
       if (cb) {
         // this is an api call
         if (this.args.length !== cb.length)
-          throw ArgumentMismatch(this.name.name, cb.length, this.args.length);
+          throw ArgumentMismatch(this.name.word, cb.length, this.args.length);
 
         const res = cb(...this.args.map((e) => e.eval(st)));
         return res ? new Const(res) : new Nil();
       }
 
       // this is a user-defined function call
-      const { params, body } = st.readFunc(this.name.name);
+      const { params, body } = st.readFunc(this.name.word);
 
       if (this.args.length !== params.length)
-        throw ArgumentMismatch(this.name.name, params.length, this.args.length);
+        throw ArgumentMismatch(this.name.word, params.length, this.args.length);
 
       st.save();
       params.forEach((name, i) => st.defineVar(name, this.args[i].eval(st)));
@@ -327,7 +327,7 @@ export class CallExpression implements Expression {
   }
 
   toString(): string {
-    return `${this.name.name}(${this.args
+    return `${this.name.word}(${this.args
       .map((arg) => arg.toString())
       .join(", ")})`;
   }

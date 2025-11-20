@@ -38,10 +38,16 @@ export function fromTokensStrict(start: IToken, end?: IToken) {
 export const strictContainsRange = (r1: Range, r2: Range) =>
   !r1.isEqual(r2) && r1.contains(r2);
 
+export const showRange = ({ start, end }: Range) =>
+  `[ ${showPosition(start)}, ${showPosition(end)} ]`;
+
+export const showPosition = ({ line, character }: Position) =>
+  `${line}:${character}`;
+
 export const EMPTY_RANGE = new Range(0, 0, 0, 0);
 
 export interface LocatedName {
-  name: string;
+  word: string;
   location: Range;
 }
 
@@ -51,9 +57,9 @@ export class LocatedName implements LocatedName {
     return new LocatedName(tok.image, range);
   }
 
-  constructor(public name: string, public location: Range) {}
+  constructor(public word: string, public location: Range) {}
 
   toString() {
-    return `${this.name}${this.location}`;
+    return `${this.word}${showRange(this.location)}`;
   }
 }

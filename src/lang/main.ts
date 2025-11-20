@@ -1,17 +1,14 @@
-import * as vscode from "vscode";
-import { Position, Range } from "vscode";
 import type { CompletionItem } from "vscode";
-import { ROBOT_CONF, ROBOT_LANG } from "./crobots.contribution";
+import * as vscode from "vscode";
+import { Range } from "vscode";
 import { API_SPEC } from "../lang/api";
-import {
-  defaultVisitor as astVisitor,
-  parseProgram,
-} from "../lang/ast_visitor";
-import { defaultVisitor as scopeVisitor } from "../lang/scope_visitor";
-import { LocatedName } from "../lang/loc_utils";
-import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
+import { Maybe, parseProgram } from "../lang/ast_visitor";
 import { ContextKind, stringOfContextKind } from "../lang/context";
+import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
+import { LocatedName, showRange } from "../lang/loc_utils";
+import { defaultVisitor as scopeVisitor } from "../lang/scope_visitor";
+import { ROBOT_LANG } from "./crobots.contribution";
 import { LOG } from "./utils";
 
 export const LANG_ID = "crobots";
@@ -44,9 +41,8 @@ export function getScopeCompletions(
   // are dealing with an expression or a statement?
   const context = ctxTree.queryRange(range);
 
-  console.log(`global context: ${ctxTree}`);
-  console.log(`cursor is at ${range}
-context: ${stringOfContextKind(context?.kind)}
+  LOG(`
+Context under cursor ${range}: ${stringOfContextKind(context?.kind)}
 ${context}`);
 
   const suggestions: CompletionItem[] = [];
@@ -60,13 +56,17 @@ ${context}`);
     case ContextKind.Expression:
       suggestions.push(
         ...scopeVisitor.queryCompletions(range).map(
-          ({ name: { name, location }, container, kind }): CompletionItem => ({
+          ({
+            name: { word: name, location },
+            container,
+            kind,
+          }): CompletionItem => ({
             label: name,
             insertText: name,
             detail: `(${
               kind === SymbolKind.Function ? "function" : "variable"
             })`,
-            documentation: `*Defined in ${container}, line ${location.startLineNumber}*`,
+            documentation: `*Defined in ${container}, line ${location.start.line}*`,
             range,
             kind:
               kind === SymbolKind.Function
@@ -112,21 +112,24 @@ export function init() {
 
   vscode.languages.registerCompletionItemProvider(LANG_ID, {
     provideCompletionItems(document, position, token, context) {
-      let { range, word } = getWordAtPosition(document, position);
+      let name = getWordAtPosition(document, position);
+      if (!name) return;
+      let { location, word } = name;
 
       let matches = KEYWORDS.concat(API_KEYS).filter((k) => k.includes(word));
 
       return {
-        items: matches.length <= 0 ? [] : getScopeCompletions(document, range),
+        items:
+          matches.length <= 0 ? [] : getScopeCompletions(document, location),
       };
     },
   });
 
   vscode.languages.registerHoverProvider(LANG_ID, {
     provideHover(document, position, token) {
-      let { range, word } = getWordAtPosition(document, position);
-
-      if (!word) return;
+      let name = getWordAtPosition(document, position);
+      if (!name) return;
+      let { location, word } = name;
 
       let match = API_KEYS.find((k) => k === word);
 
@@ -136,7 +139,7 @@ export function init() {
 
       return {
         contents: [API_SPEC[match].documentation ?? ""],
-        range,
+        range: location,
       };
     },
   });
@@ -144,45 +147,39 @@ export function init() {
   function getWordAtPosition(
     document: vscode.TextDocument,
     position: vscode.Position
-  ) {
-    let range = document.getWordRangeAtPosition(position);
-    let word = document.getText(range);
+  ): Maybe<LocatedName> {
+    let location = document.getWordRangeAtPosition(position);
+    if (!location) return;
+    let word = document.getText(location);
 
     return {
-      range,
+      location,
       word,
     };
   }
 
   vscode.languages.registerDefinitionProvider(LANG_ID, {
     provideDefinition(document, position, token) {
-      let { range, word } = getWordAtPosition(document, position);
+      let name = getWordAtPosition(document, position);
+      if (!name) return;
 
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
 
-      if (!word) return;
+      const definitionLoc = scopeVisitor.queryReferences(name);
 
-      const name = new LocatedName(word, range);
-
-      const definitionLoc = word && scopeVisitor.queryReferences(name);
-
-      if (definitionLoc) {
-        return { range: definitionLoc.def, uri: document.uri };
-      }
+      return definitionLoc && { range: definitionLoc.def, uri: document.uri };
     },
   });
 
   vscode.languages.registerReferenceProvider(LANG_ID, {
     provideReferences(document, position, token, context) {
-      let { range, word } = getWordAtPosition(document, position);
+      let name = getWordAtPosition(document, position);
+      if (!name) return;
+      let { location, word } = name;
 
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
-
-      if (!word) return;
-
-      const name = new LocatedName(word, range);
 
       const refs = word && scopeVisitor.queryReferences(name);
 
@@ -194,14 +191,12 @@ export function init() {
 
   vscode.languages.registerDocumentHighlightProvider(LANG_ID, {
     provideDocumentHighlights(document, position, token) {
-      let { range, word } = getWordAtPosition(document, position);
+      let name = getWordAtPosition(document, position);
+      if (!name) return;
+      let { location, word } = name;
 
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
-
-      if (!word) return;
-
-      const name = new LocatedName(word, range);
 
       const refs = word && scopeVisitor.queryReferences(name);
 
@@ -214,14 +209,11 @@ export function init() {
   // https://vscode.dev/github/microsoft/vscode/blob/main/extensions/typescript-language-features/src/languageFeatures/rename.ts#L60
   vscode.languages.registerRenameProvider(LANG_ID, {
     provideRenameEdits(document, position, newName, token) {
-      let { range, word } = getWordAtPosition(document, position);
-
-      if (!word || document.isClosed) return;
+      let name = getWordAtPosition(document, position);
+      if (!name) return;
 
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
-
-      const name = new LocatedName(word, range);
 
       const queryRes = scopeVisitor.queryReferences(name);
 
@@ -242,18 +234,22 @@ export function init() {
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
 
+      LOG(`number of definitions: ${scopeVisitor.definitions.size}`);
+
       const symbols: vscode.DocumentSymbol[] = [
         ...scopeVisitor.definitions.values(),
-      ].map(({ name: { name, location }, container, kind }) => ({
-        name,
-        containerName: container,
-        range: location,
-        detail: "",
-        tags: [],
-        selectionRange: location,
-        kind,
-        children: [],
-      }));
+      ].map(({ name: { word: name, location }, container, kind }) => {
+        return {
+          name,
+          containerName: container,
+          range: location,
+          detail: "",
+          tags: [],
+          selectionRange: location,
+          kind,
+          children: [],
+        };
+      });
 
       return symbols;
     },
@@ -294,10 +290,10 @@ export function init() {
         if (!openParen) return;
 
         const beforeTrigger = openParen.start;
-        const { range, word: callee } = getWordAtPosition(
-          document,
-          beforeTrigger
-        );
+        const name = getWordAtPosition(document, beforeTrigger);
+        if (!name) return;
+
+        let { location, word: callee } = name;
 
         const rangeSinceParen = openParen.union(new Range(position, position));
 
