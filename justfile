@@ -6,7 +6,13 @@ default: build
 build:
   esbuild {{entrypoints}} {{common_opts}} --sourcemap
 
+
 watch:
   esbuild {{entrypoints}} {{common_opts}} --sourcemap --watch
-  
+
+bundle:
+  esbuild {{entrypoints}} {{common_opts}} --minify
+
+package: bundle
+  vsce pack
 
