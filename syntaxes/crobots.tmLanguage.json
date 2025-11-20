@@ -1,0 +1,73 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/refs/heads/master/tmlanguage.json",
+  "name": "CROBOTS",
+  "scopeName": "source.crobots",
+  "fileTypes": [
+    "r"
+  ],
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#intrinsic"
+    },
+    {
+      "include": "#operator"
+    },
+    {
+      "include": "#keyword"
+    },
+    {
+      "include": "#type-keyword"
+    },
+    {
+      "include": "#constant"
+    },
+    {
+      "include": "#identifier"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "comment": "block comment",
+          "name": "comment.block",
+          "begin": "/\\*",
+          "end": "\\*/"
+        },
+        {
+          "comment": "line comment",
+          "name": "comment.line",
+          "begin": "//",
+          "end": "$"
+        }
+      ]
+    },
+    "intrinsic": {
+      "match": "\\b(scan|drive|cannon|speed|loc_x|loc_y|rand|tan|atan|cos|sin|sqrt)\\b",
+      "name": "support.function"
+    },
+    "keyword": {
+      "match": "\\b(do|if|else|return|while)\\b",
+      "name": "keyword.control"
+    },
+    "type-keyword": {
+      "match": "\\b(int)\\b",
+      "name": "keyword.other"
+    },
+    "identifier": {
+      "match": "([a-zA-Z][\\w_]*)|([a-zA-Z_][\\w_]+)",
+      "name": "variable.name"
+    },
+    "operator": {
+      "match": "=|>|<|!|~|\\?|:|==|<=|>=|!=|&&|\\|\\||\\+\\+|--|\\+|-|\\*|/|&|\\||\\^|%|<<|>>|\\+=|-=|\\*=|/=|&=|\\|=|\\^=|%=|<<=|>>=",
+      "name": "keyword.operator"
+    },
+    "constant": {
+      "match": "\\d+",
+      "name": "constant"
+    }
+  }
+}

@@ -29,9 +29,17 @@
           "CROBOTS"
         ],
         "extensions": [
-          ".r"
+          ".r",
+          ".R"
         ],
         "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "crobots",
+        "scopeName": "source.crobots",
+        "path": "./syntaxes/crobots.tmLanguage.json"
       }
     ]
   },
