@@ -16,11 +16,8 @@ The extension works on files with the `.r` extension.
 
 ## Dev notes
 
-The language features are powered by a [chevrotain](https://chevrotain.io/docs/) parser written in TypeScript. I've adapted it from an earlier CROBOTS-inspired web project that's on the back burner, also this is my first time making something close to a language server. Issues and pull requests are welcome.
+The language features are powered by a [chevrotain](https://chevrotain.io/docs/) parser written in TypeScript. I've adapted it from my earlier editor-based web project that's on my back burner, also this is my first time making something close to a language server. Issues and pull requests are welcome.
 
 ---
 
-## 🥳
-
-This extension was made for the 40th anniversary of CROBOTS.
-Here's to a great game that made history! 🥂
+This extension was made for the 40th anniversary of CROBOTS. Hope it boosts someone's submission to [the Crobots Tournament 2025](https://crobots.deepthought.it/home.php?page=tournament2025&link=0). 🥳
