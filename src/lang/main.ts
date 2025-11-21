@@ -51,11 +51,6 @@ function findPreviousMatch(
       idx + searchString.length - 1
     );
 
-    console.log(
-      `found ( in line ${line.text} ${showPosition(
-        position
-      )}: ${idx}, ${showRange(res)}`
-    );
     return res;
   }
 }
