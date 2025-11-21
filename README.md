@@ -5,18 +5,20 @@ This Visual Studio Code extension provides IntelliSense for the [CROBOTS](https:
 ## Features
 
 * Document symbols
-* Syntax Highlighting
+* Syntax highlighting
 * Go-to definition
 * References view
-* Inline completions
-* Variable renaming for keywords, local variables and intrinsic functions
+* Inline suggestions for keywords, local variables and intrinsic functions
+* Variable renaming
 * Intrinsic function documentation
+
+The extension activates on files with the `.r` extension.
 
 ## Contributing
 
-The language features are powered by a [chevrotain](https://chevrotain.io/docs/) parser written in TypeScript.
+The language features are powered by a [chevrotain](https://chevrotain.io/docs/) parser written in TypeScript. Issues and pull requests are welcome.
 
-Issues and pull requests are welcome.
+---
 
 ## 🥳
 

@@ -12,6 +12,10 @@ watch:
 bundle:
   esbuild {{entrypoints}} {{common_opts}} --minify
 
+# invokes build command from npm scripts
 package version:
-  vsce pack {{version}} # invokes build command from npm scripts
+  vsce pack {{version}}
+
+publish:
+  vsce publish
 
