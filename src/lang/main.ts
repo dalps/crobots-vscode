@@ -5,7 +5,7 @@ import { Maybe, parseProgram } from "../lang/ast_visitor";
 import { ContextKind, stringOfContextKind } from "../lang/context";
 import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
-import { LocatedName, showRange } from "../lang/loc_utils";
+import { LocatedName, showPosition, showRange } from "../lang/loc_utils";
 import {
   GLOBAL_SCOPE_ID,
   defaultVisitor as scopeVisitor,
@@ -41,15 +41,23 @@ function findPreviousMatch(
   position: vscode.Position
 ) {
   const line = document.lineAt(position.line);
-  const res = line.text.search(searchString);
-  return res === -1
-    ? undefined
-    : new Range(
-        position.line,
-        res,
-        res + searchString.length - 1,
-        position.line
-      );
+  const idx = line.text.indexOf(searchString);
+
+  if (idx >= 0) {
+    const res = new Range(
+      position.line,
+      idx,
+      position.line,
+      idx + searchString.length - 1
+    );
+
+    console.log(
+      `found ( in line ${line.text} ${showPosition(
+        position
+      )}: ${idx}, ${showRange(res)}`
+    );
+    return res;
+  }
 }
 
 export function getScopeCompletions(
@@ -145,7 +153,10 @@ export function init() {
       if (!doc) return;
       // todo: tokenize & show user docstrings
 
-      return new vscode.Hover(["```c\n(intrinsic function)\n```", doc], location);
+      return new vscode.Hover(
+        ["```c\n(intrinsic function)\n```", doc],
+        location
+      );
     },
   });
 
@@ -265,7 +276,7 @@ export function init() {
         // We're outside a call site, nothing to show
         if (!openParen) return;
 
-        const beforeTrigger = openParen.start;
+        const beforeTrigger = openParen.start.translate(0, -1);
         const name = getWordAtPosition(document, beforeTrigger);
         if (!name) return;
 
@@ -274,6 +285,8 @@ export function init() {
         const rangeSinceParen = openParen.union(new Range(position, position));
 
         const textSinceParen = document.getText(rangeSinceParen);
+
+        LOG(`Requeseted signature for ${callee} in ${textSinceParen}`);
 
         // Cursor is outside call site, goodbye
         if (textSinceParen.includes(")")) return;
