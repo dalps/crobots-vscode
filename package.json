@@ -1,7 +1,7 @@
 {
   "name": "crobots-vscode",
   "description": "Editor language support for CROBOTS programs.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "dalps",
   "license": "GPL-3.0-only",
   "engines": {
