@@ -1,3 +1,4 @@
+import { MarkdownString } from "vscode";
 import { DEBUG } from "./main";
 
 export const TODO = new Error("TODO");
@@ -57,3 +58,5 @@ export class Stack<T> {
 export function LOG(...msg: any[]) {
   DEBUG && console.log(...msg);
 }
+
+export const md = (text?: string) => new MarkdownString(text);

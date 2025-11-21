@@ -11,7 +11,7 @@ import {
   defaultVisitor as scopeVisitor,
 } from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
-import { LOG } from "./utils";
+import { LOG, md } from "./utils";
 
 export const DEBUG = false;
 export const LANG_ID = "crobots";
@@ -71,7 +71,11 @@ export function getScopeCompletions(
       item.detail = `(${
         kind === SymbolKind.Function ? "function" : "variable"
       })`;
-      item.documentation = `*Defined in ${container}, line ${location.start.line}*`;
+      item.documentation = md(
+        `Defined in ${
+          container === GLOBAL_SCOPE_ID ? "global scope" : `\`${container}\``
+        }, line ${location.start.line}`
+      );
 
       return item;
     });
@@ -86,7 +90,7 @@ export function getApiCompletions(range: vscode.Range): CompletionItem[] {
     let params = Object.keys(v.parameters ?? {});
     let item = new CompletionItem(label, CompletionItemKind.Function);
     item.detail = v.detail;
-    item.documentation = v.documentation;
+    item.documentation = md(v.documentation);
     item.range = range;
     return item;
   });
@@ -137,11 +141,11 @@ export function init() {
 
       let match = API_KEYS.find((k) => k === word);
       if (match === undefined) return;
-      let doc = API_SPEC[match]?.documentation;
+      let doc = md(API_SPEC[match]?.documentation);
       if (!doc) return;
       // todo: tokenize & show user docstrings
 
-      return new vscode.Hover(doc, location);
+      return new vscode.Hover(["```c\n(intrinsic function)\n```", doc], location);
     },
   });
 
@@ -229,7 +233,6 @@ export function init() {
           location,
           location
         );
-        console.log(`${name}: ${container}`);
 
         if (container !== undefined && container !== GLOBAL_SCOPE_ID) {
           const parent = containerMap.get(container);
@@ -238,6 +241,9 @@ export function init() {
           containerMap.set(name, sym);
         }
       });
+
+      LOG(`# of definitions ${scopeVisitor.definitions.size}`);
+      LOG(`# of output document symbols ${containerMap.size}`);
 
       return [...containerMap.values()];
     },
