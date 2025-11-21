@@ -1,5 +1,5 @@
-*.vsix
-*.js.map
+**/*.vsix
+**/*.js.map
 .vscode
 
 # Created by https://www.toptal.com/developers/gitignore/api/node
