@@ -1,3 +1,5 @@
+import { DEBUG } from "./main";
+
 export const TODO = new Error("TODO");
 
 export function zip<A, B>(as: A[], bs: B[]): [A, B][] {
@@ -53,5 +55,5 @@ export class Stack<T> {
 }
 
 export function LOG(...msg: any[]) {
-  console.log(...msg);
+  DEBUG && console.log(...msg);
 }

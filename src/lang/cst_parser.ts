@@ -257,7 +257,7 @@ export function generateSignatures() {
   const productions = P.getGAstProductions();
   const dst = generateCstDts(productions);
 
-  console.log(dst);
+  LOG(dst);
   return dst;
 }
 

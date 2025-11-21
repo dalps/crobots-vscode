@@ -1,6 +1,5 @@
-import type { CompletionItem } from "vscode";
 import * as vscode from "vscode";
-import { Range } from "vscode";
+import { CompletionItem, CompletionItemKind, Range, SymbolKind } from "vscode";
 import { API_SPEC } from "../lang/api";
 import { Maybe, parseProgram } from "../lang/ast_visitor";
 import { ContextKind, stringOfContextKind } from "../lang/context";
@@ -11,117 +10,125 @@ import { defaultVisitor as scopeVisitor } from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
 import { LOG } from "./utils";
 
+export const DEBUG = false;
 export const LANG_ID = "crobots";
-export const THEME_ID = "robotTheme";
-
-const { SymbolKind, CompletionItemKind } = vscode;
-
-// vscode.languages.setMonarchTokensProvider(LANG_ID, ROBOT_LANG);
 
 const API_KEYS = Object.keys(API_SPEC);
 const KEYWORDS: string[] = ROBOT_LANG["keywords"].concat(
   ROBOT_LANG["typeKeywords"]
 );
 
-export function getScopeCompletions(
+function getWordAtPosition(
   document: vscode.TextDocument,
-  range: vscode.Range
-): vscode.CompletionItem[] {
-  const text = document.getText();
-  const { cst } = parseCst(text);
-  const ast = parseProgram(text);
+  position: vscode.Position
+): Maybe<LocatedName> {
+  let location = document.getWordRangeAtPosition(position);
+  if (!location) return;
+  let word = document.getText(location);
 
+  return new LocatedName(word, location);
+}
+
+/**
+ * Replacement for ITextModel.findPreviousMatch
+ */
+function findPreviousMatch(
+  document: vscode.TextDocument,
+  searchString: string,
+  position: vscode.Position
+) {
+  const line = document.lineAt(position.line);
+  const res = line.text.search(searchString);
+  return res === -1
+    ? undefined
+    : new Range(
+        position.line,
+        res,
+        res + searchString.length - 1,
+        position.line
+      );
+}
+
+export function getScopeCompletions(
+  text: string,
+  range: vscode.Range
+): CompletionItem[] {
+  const ast = parseProgram(text);
   scopeVisitor.program(ast);
 
-  const ctxTree = contextVisitor.program(
-    cst.children,
-    new Range(0, 0, document.lineCount + 1, 0)
-  );
-
-  // are dealing with an expression or a statement?
-  const context = ctxTree.queryRange(range);
-
-  LOG(`
-Context under cursor ${range}: ${stringOfContextKind(context?.kind)}
-${context}`);
-
-  const suggestions: CompletionItem[] = [];
-
-  switch (context?.kind) {
-    case ContextKind.Identifier:
-      // no suggestions
-      break;
-    case ContextKind.Statement:
-      suggestions.push(...getKeywordCompletions(range));
-    case ContextKind.Expression:
-      suggestions.push(
-        ...scopeVisitor.queryCompletions(range).map(
-          ({
-            name: { word: name, location },
-            container,
-            kind,
-          }): CompletionItem => ({
-            label: name,
-            insertText: name,
-            detail: `(${
-              kind === SymbolKind.Function ? "function" : "variable"
-            })`,
-            documentation: `*Defined in ${container}, line ${location.start.line}*`,
-            range,
-            kind:
-              kind === SymbolKind.Function
-                ? CompletionItemKind.Function
-                : CompletionItemKind.Variable,
-            // you could sort sort based on locality
-          })
-        )
+  return scopeVisitor
+    .queryCompletions(range)
+    .map(({ name: { word, location }, container, kind }) => {
+      const item = new CompletionItem(
+        word,
+        kind === SymbolKind.Function
+          ? CompletionItemKind.Function
+          : CompletionItemKind.Variable
       );
-      suggestions.push(...getApiCompletions(range));
-  }
+      item.detail = `(${
+        kind === SymbolKind.Function ? "function" : "variable"
+      })`;
+      item.documentation = `*Defined in ${container}, line ${location.start.line}*`;
 
-  return suggestions;
+      return item;
+    });
 }
 
-export function getKeywordCompletions(range: vscode.Range): CompletionItem[] {
-  return KEYWORDS.map((k) => ({
-    label: k,
-    insertText: k,
-    kind: CompletionItemKind.Keyword,
-    range,
-  }));
-}
+export const KeywordCompletions: CompletionItem[] = KEYWORDS.map(
+  (k) => new CompletionItem(k, CompletionItemKind.Keyword)
+);
 
 export function getApiCompletions(range: vscode.Range): CompletionItem[] {
   return Object.entries(API_SPEC).map(([label, v]) => {
     let params = Object.keys(v.parameters ?? {});
-    return {
-      label,
-      detail: v.detail,
-      documentation: v.documentation,
-      kind: CompletionItemKind.Function,
-      insertText: label,
-      range,
-    };
+    let item = new CompletionItem(label, CompletionItemKind.Function);
+    item.detail = v.detail;
+    item.documentation = v.documentation;
+    item.range = range;
+    return item;
   });
 }
 
 export function init() {
-  Range.toString = function (this: vscode.Range) {
-    return `[${this.start.line}:${this.start.character}-${this.end.line}:${this.end.character}]`;
-  };
-
   vscode.languages.registerCompletionItemProvider(LANG_ID, {
     provideCompletionItems(document, position, token, context) {
-      let name = getWordAtPosition(document, position);
-      if (!name) return;
-      let { location, word } = name;
-
-      let matches = KEYWORDS.concat(API_KEYS).filter((k) => k.includes(word));
-
-      return {
-        items:
-          matches.length <= 0 ? [] : getScopeCompletions(document, location),
+      const text = document.getText();
+      const { cst } = parseCst(text);
+      const name = getWordAtPosition(document, position);
+      const { location, word } = name ?? {
+        location: new Range(position, position),
+        word: "",
       };
+      const suggestions: CompletionItem[] = [];
+
+      LOG(`Querying completions at ${location} (typing: ${word})`);
+
+      // Are we dealing with an expression or a statement?
+      const ctxTree = contextVisitor.program(
+        cst.children,
+        new Range(0, 0, document.lineCount + 1, 0)
+      );
+      const ctx = ctxTree.queryRange(location);
+      if (!ctx) return [...KeywordCompletions, ...getApiCompletions(location)];
+
+      LOG(`Context under cursor ${showRange(location)}: ${stringOfContextKind(
+        ctx.kind
+      )}
+      ${ctx}`);
+      LOG(`${ctxTree}`);
+
+      switch (ctx.kind) {
+        case ContextKind.Identifier:
+          // expecting a fresh identifier, no suggestions
+          break;
+        case ContextKind.Statement:
+          suggestions.push(...KeywordCompletions);
+        case ContextKind.Expression:
+          suggestions.push(...getScopeCompletions(text, location));
+          suggestions.push(...getApiCompletions(location));
+      }
+
+      return suggestions;
     },
   });
 
@@ -132,28 +139,14 @@ export function init() {
       let { location, word } = name;
 
       let match = API_KEYS.find((k) => k === word);
-
       if (match === undefined) return;
+      let doc = API_SPEC[match]?.documentation;
+      if (!doc) return;
+      // todo: tokenize & show user docstrings
 
-      // todo: tokenize & show docstrings
-
-      return {
-        contents: [API_SPEC[match].documentation ?? ""],
-        range: location,
-      };
+      return new vscode.Hover(doc, location);
     },
   });
-
-  function getWordAtPosition(
-    document: vscode.TextDocument,
-    position: vscode.Position
-  ): Maybe<LocatedName> {
-    let location = document.getWordRangeAtPosition(position);
-    if (!location) return;
-    let word = document.getText(location);
-
-    return new LocatedName(word, location);
-  }
 
   vscode.languages.registerDefinitionProvider(LANG_ID, {
     provideDefinition(document, position, token) {
@@ -166,7 +159,10 @@ export function init() {
       const definitionLoc = scopeVisitor.queryReferences(name);
 
       LOG(`definition for ${name}: ${definitionLoc}`);
-      return definitionLoc && { range: definitionLoc.def, uri: document.uri };
+
+      return (
+        definitionLoc && new vscode.Location(document.uri, definitionLoc.def)
+      );
     },
   });
 
@@ -174,16 +170,15 @@ export function init() {
     provideReferences(document, position, token, context) {
       let name = getWordAtPosition(document, position);
       if (!name) return;
-      let { location, word } = name;
 
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
 
-      const refs = word && scopeVisitor.queryReferences(name);
+      const refs = scopeVisitor.queryReferences(name)?.refs;
 
-      if (refs) {
-        return refs.refs.map((range) => ({ range, uri: document.uri }));
-      }
+      return (
+        refs && refs.map((range) => new vscode.Location(document.uri, range))
+      );
     },
   });
 
@@ -191,16 +186,13 @@ export function init() {
     provideDocumentHighlights(document, position, token) {
       let name = getWordAtPosition(document, position);
       if (!name) return;
-      let { location, word } = name;
 
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
 
-      const refs = word && scopeVisitor.queryReferences(name);
+      const refs = scopeVisitor.queryReferences(name)?.refs;
 
-      if (refs) {
-        return refs.refs.map((range) => ({ range }));
-      }
+      return refs && refs.map((range) => new vscode.DocumentHighlight(range));
     },
   });
 
@@ -242,24 +234,6 @@ export function init() {
       return symbols;
     },
   });
-
-  // Replacement for ITextModel.findPreviousMatch
-  function findPreviousMatch(
-    document: vscode.TextDocument,
-    searchString: string,
-    position: vscode.Position
-  ) {
-    const line = document.lineAt(position.line);
-    const res = line.text.search(searchString);
-    return res === -1
-      ? undefined
-      : new Range(
-          position.line,
-          res,
-          res + searchString.length - 1,
-          position.line
-        );
-  }
 
   vscode.languages.registerSignatureHelpProvider(
     LANG_ID,

@@ -90,7 +90,7 @@ export class Scope implements ScopeNode {
     const scopeSmaller = this.range.contains(scope.range);
 
     if (!scopeSmaller) {
-      console.log(
+      LOG(
         `Warning: refusing to append scope ${scope.range} because it is larger than this ${this.range}.`
       );
       return;
@@ -99,7 +99,7 @@ export class Scope implements ScopeNode {
     const scopeOverlap = this.children.find((ch) => {
       const inter = ch.range.intersection(scope.range);
       inter &&
-        console.log(
+        LOG(
           `Warning: refusing to append scope ${scope.range} because it overlaps with the child ${ch.range}.`
         );
 

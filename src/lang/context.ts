@@ -1,6 +1,6 @@
-import * as vscode from "vscode";
-import { Position } from "vscode";
-import { EMPTY_RANGE, Range } from "./loc_utils";
+import { Range } from "vscode";
+import { EMPTY_RANGE, showRange } from "./loc_utils";
+import { LOG } from "./utils";
 
 export enum ContextKind {
   Statement,
@@ -81,7 +81,7 @@ export class Context implements ContextNode {
    * Get the smallest node that contains the given range.
    */
   queryRange(range: Range): Context | undefined {
-    console.log(`querying ` + this.label);
+    LOG(`querying ` + this.label);
 
     if (!this.range?.contains(range)) return;
 
@@ -92,9 +92,9 @@ export class Context implements ContextNode {
   }
 
   toString(level = 0): string {
-    return `${"|   ".repeat(level)}${this.label}${
+    return `${"|   ".repeat(level)}${this.label}${showRange(
       this.range
-    } { ${stringOfContextKind(this.kind)} }
+    )} { ${stringOfContextKind(this.kind)} }
 ${this.children.map((ch) => ch.toString(level + 1)).join("")}`;
   }
 }
