@@ -19,5 +19,6 @@ The language features are powered by a [chevrotain](https://chevrotain.io/docs/)
 Issues and pull requests are welcome.
 
 ## 🥳
+
 This extension was made for the 40th anniversary of CROBOTS.
 Here's to a great game that made history!

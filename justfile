@@ -6,7 +6,6 @@ default: build
 build:
   esbuild {{entrypoints}} {{common_opts}} --sourcemap
 
-
 watch:
   esbuild {{entrypoints}} {{common_opts}} --sourcemap --watch
 

@@ -1,7 +1,7 @@
 {
   "name": "crobots-vscode",
   "description": "Editor language support for CROBOTS programs.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "dalps",
   "license": "GPL-3.0-only",
   "engines": {
@@ -47,7 +47,8 @@
   },
   "scripts": {
     "vscode:prepublish": "just bundle",
-    "build": "just build",
+    "build": "just bundle",
+    "debug": "just build",
     "lint": "eslint",
     "watch": "just watch"
   },
