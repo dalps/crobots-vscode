@@ -6,7 +6,10 @@ import { ContextKind, stringOfContextKind } from "../lang/context";
 import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
 import { LocatedName, showRange } from "../lang/loc_utils";
-import { defaultVisitor as scopeVisitor } from "../lang/scope_visitor";
+import {
+  GLOBAL_SCOPE_ID,
+  defaultVisitor as scopeVisitor,
+} from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
 import { LOG } from "./utils";
 
@@ -216,16 +219,27 @@ export function init() {
       const ast = parseProgram(document.getText());
       scopeVisitor.program(ast);
 
-      LOG(`number of definitions: ${scopeVisitor.definitions.size}`);
+      const defs = [...scopeVisitor.definitions.values()];
+      const containerMap = new Map<string, vscode.DocumentSymbol>();
+      defs.forEach(({ name: { word: name, location }, container, kind }) => {
+        const sym = new vscode.DocumentSymbol(
+          name,
+          "",
+          kind,
+          location,
+          location
+        );
+        console.log(`${name}: ${container}`);
 
-      const symbols: vscode.DocumentSymbol[] = [
-        ...scopeVisitor.definitions.values(),
-      ].map(
-        ({ name: { word: name, location }, container, kind }) =>
-          new vscode.DocumentSymbol(name, "", kind, location, location)
-      );
+        if (container !== undefined && container !== GLOBAL_SCOPE_ID) {
+          const parent = containerMap.get(container);
+          parent?.children.push(sym);
+        } else {
+          containerMap.set(name, sym);
+        }
+      });
 
-      return symbols;
+      return [...containerMap.values()];
     },
   });
 

@@ -30,6 +30,8 @@ type SymbolKind = vscode.SymbolKind.Function | vscode.SymbolKind.Variable;
 
 const { SymbolKind } = vscode;
 
+export const GLOBAL_SCOPE_ID = "global_scope";
+
 interface Definition {
   kind: SymbolKind;
   name: LocatedName;
@@ -263,7 +265,7 @@ export class ScopeVisitor {
     this.definitions.clear();
 
     // reset the global scope
-    this.globalScope = new Scope(ctx.location, undefined, "global scope");
+    this.globalScope = new Scope(ctx.location, undefined, GLOBAL_SCOPE_ID);
     this.activeScope = this.globalScope;
 
     ctx.toplevelStatements.forEach((decl) => this.toplevelStmt(decl));
