@@ -211,7 +211,7 @@ export const API_SPEC: Record<string, RobotAPIDetails> = {
   },
   atan: {
     label: "atan",
-    documentation: "Returns the arctangent of the  argument.",
+    documentation: "Returns the arctangent of the argument.",
     parameters: [
       {
         label: "ratio",
