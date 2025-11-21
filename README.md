@@ -1,6 +1,6 @@
 # crobots-vscode
 
-This Visual Studio Code extension provides IntelliSense for the CROBOTS programming language.
+This Visual Studio Code extension provides IntelliSense for the [CROBOTS](https://tpoindex.github.io/crobots) programming language.
 
 ## Features
 
@@ -18,7 +18,6 @@ The language features are powered by a [chevrotain](https://chevrotain.io/docs/)
 
 Issues and pull requests are welcome.
 
----
-
+## 🥳
 This extension was made for the 40th anniversary of CROBOTS.
-Happy birthday to a great game!
+Here's to a great game that made history!

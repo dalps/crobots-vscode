@@ -103,19 +103,13 @@ export function init() {
 
       LOG(`Querying completions at ${location} (typing: ${word})`);
 
-      // Are we dealing with an expression or a statement?
+      // Are we inside an expression or a statement?
       const ctxTree = contextVisitor.program(
         cst.children,
         new Range(0, 0, document.lineCount + 1, 0)
       );
       const ctx = ctxTree.queryRange(location);
       if (!ctx) return [...KeywordCompletions, ...getApiCompletions(location)];
-
-      LOG(`Context under cursor ${showRange(location)}: ${stringOfContextKind(
-        ctx.kind
-      )}
-      ${ctx}`);
-      LOG(`${ctxTree}`);
 
       switch (ctx.kind) {
         case ContextKind.Identifier:

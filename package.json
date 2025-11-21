@@ -1,6 +1,6 @@
 {
   "name": "crobots-vscode",
-  "description": "Editor language services for CROBOTS programs.",
+  "description": "Editor language support for CROBOTS programs.",
   "version": "0.0.1",
   "publisher": "dalps",
   "license": "GPL-3.0-only",
@@ -21,7 +21,7 @@
     "commands": [
       {
         "command": "extension.runRobot",
-        "title": "Echo \"Run robot\""
+        "title": "Run robot"
       }
     ],
     "languages": [
@@ -46,8 +46,8 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run build",
-    "build": "just bundle",
+    "vscode:prepublish": "just bundle",
+    "build": "just build",
     "lint": "eslint",
     "watch": "just watch"
   },
