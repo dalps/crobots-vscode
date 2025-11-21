@@ -13,6 +13,6 @@ watch:
 bundle:
   esbuild {{entrypoints}} {{common_opts}} --minify
 
-package: bundle
-  vsce pack
+package version:
+  vsce pack {{version}} # invokes build command from npm scripts
 
