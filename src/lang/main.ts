@@ -7,6 +7,7 @@ import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
 import { LocatedName, showPosition, showRange } from "../lang/loc_utils";
 import {
+  BLOCK_SCOPE_ID,
   GLOBAL_SCOPE_ID,
   defaultVisitor as scopeVisitor,
 } from "../lang/scope_visitor";
@@ -242,11 +243,16 @@ export function init(context: vscode.ExtensionContext) {
             location
           );
 
-          if (container !== undefined && container !== GLOBAL_SCOPE_ID) {
-            const parent = containerMap.get(container);
-            parent?.children.push(sym);
-          } else {
-            containerMap.set(name, sym);
+          switch (container) {
+            case undefined:
+            case GLOBAL_SCOPE_ID: {
+              containerMap.set(name, sym);
+              break;
+            }
+            default: {
+              const parent = containerMap.get(container);
+              parent?.children.push(sym);
+            }
           }
         });
 

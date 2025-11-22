@@ -79,3 +79,40 @@ main()
     ).declarations[1].name.location
   );
 });
+
+test("test scope containers", () => {
+  const input = `int bar;
+
+distance_bad2(x,y)
+int x, yy;
+{
+  x + 2;
+  x = 2;
+  {
+    int a = 2;
+    x -= ++y;
+    if (1) { int a_b_c; 2 > distance_bad2(a_b_c,x); } else { 0; }
+  }
+  while (0 && 1) { return 2; }
+  distance_bad2(a3,x);
+}
+
+main() {
+  int z, boo, i = distance_bad2(3);
+
+  boo = 2;
+
+  return 2 + 3;
+}
+`;
+  const ast = parseProgram(input);
+  scopeVisitor.program(ast);
+
+  const def = [...scopeVisitor.definitions.values()];
+
+  const aDef = def.find(
+    (d) => d.name.word === "a" && d.container === "distance_bad2"
+  );
+
+  expect(aDef).toBeDefined();
+});

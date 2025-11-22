@@ -31,6 +31,7 @@ type SymbolKind = vscode.SymbolKind.Function | vscode.SymbolKind.Variable;
 const { SymbolKind } = vscode;
 
 export const GLOBAL_SCOPE_ID = "global_scope";
+export const BLOCK_SCOPE_ID = "<block>";
 
 interface Definition {
   kind: SymbolKind;
@@ -321,7 +322,11 @@ export class ScopeVisitor {
   }
 
   private blockStmt(ctx: BlockStatement) {
-    this.inScope(() => this.stmtList(ctx.body), ctx.location, "<block>");
+    this.inScope(
+      () => this.stmtList(ctx.body),
+      ctx.location,
+      this.activeScope?.label || GLOBAL_SCOPE_ID
+    );
   }
 
   private retStmt(ctx: ReturnStatement) {
