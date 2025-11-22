@@ -59,6 +59,7 @@ export class CRobotsParser extends CstParser {
     this.CONSUME(T["("]);
     this.MANY_SEP({ SEP: T[","], DEF: () => this.SUBRULE2(this.identifier) });
     this.CONSUME(T[")"]);
+    this.MANY(() => this.SUBRULE2(this.variableStmt)); // K&R or old-style declarations
     this.CONSUME(T["{"]);
     this.SUBRULE(this.stmtList);
     this.CONSUME(T["}"]);

@@ -91,7 +91,17 @@ export default class ASTVisitor
   functionStmt(ctx: cst_types.FunctionStmtCstChildren): Maybe<Statement> {
     let doc = ctx.DocString?.at(0)?.payload;
     let name = this.visit<LocatedName>(ctx.identifier);
-    let params = this.visitList<LocatedName>(ctx.identifier?.slice(1));
+
+    let params = this.visitList<LocatedName>(
+      ctx.identifier
+        ?.slice(1)
+        // Only consider the names between '(' and ')' and ignore the K&R style declarations some ancient programs used to sandwich between ')' and '{'
+        .filter(
+          (p) => 
+            (p.location?.endOffset || 0) <
+            (ctx.RPAREN.at(0)?.startOffset || Infinity)
+        )
+    );
     let body = this.visit<Statement[]>(ctx.stmtList);
     let rbrace = ctx.RBRACE?.at(0);
 

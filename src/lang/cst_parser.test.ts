@@ -90,6 +90,77 @@ foo(deg) {
   expect(parseProgram(input)).to.not.throw;
 });
 
+test("parse old-style (or K&R) declarations", () => {
+  const input = `
+int i;
+
+main()
+{
+  i = 3;
+  foo(270);
+  return i;
+}
+
+foo(deg)
+int deg;
+{
+  int i = 0;
+  while (i < deg)
+    i = i + 1;
+}
+
+plot_course(xx,yy)
+int xx, yy;
+{
+  int d;
+  int x,y;
+  int scale;
+  int curx, cury;
+
+  scale = 100000;  /* scale for trig functions */
+
+  curx = loc_x();
+  cury = loc_y();
+  x = curx - xx;
+  y = cury - yy;
+
+  if (x == 0) {
+    if (yy > cury)
+      d = 90;
+    else
+      d = 270;
+  } else {
+    if (yy < cury) {
+      if (xx > curx)
+        d = 360 + atan((scale * y) / x);
+      else
+        d = 180 + atan((scale * y) / x);
+    } else {
+      if (xx > curx)
+        d = atan((scale * y) / x);
+      else
+        d = 180 + atan((scale * y) / x);
+    }
+  }
+  return (d);
+}
+
+distance(x1,y1,x2,y2)
+int x1;
+int y1;
+int x2;
+int y2;
+{
+  int x, y;
+
+  x = x1 - x2;
+  y = y1 - y2;
+  d = sqrt((x*x) + (y*y));
+  return(d);
+}`;
+  expect(parseProgram(input)).to.not.throw;
+});
+
 test("parse a complex program", () => {
   const input = `
 int	Dir, Range, DirR;
