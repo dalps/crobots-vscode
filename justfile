@@ -14,8 +14,11 @@ bundle:
 
 # invokes build command from npm scripts
 package version:
-  vsce pack {{version}}
+  vsce pack {{version}} -o vsix/
 
 publish:
   vsce publish
+
+stats:
+  vsce show dalps.crobots-vscode
 

@@ -12,5 +12,5 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(disposable);
 
   // todo: push the disposables created by init
-  initLanguageFeatures();
+  initLanguageFeatures(context);
 }
