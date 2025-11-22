@@ -5,26 +5,21 @@
   },
   "brackets": [
     ["{", "}"],
-    ["[", "]"],
+    ["(", ")"]
+  ],
+  "colorizedBracketPairs": [
+    ["{", "}"],
     ["(", ")"]
   ],
   "autoClosingPairs": [
     { "open": "{", "close": "}" },
-    { "open": "[", "close": "]" },
     { "open": "(", "close": ")" },
-    { "open": "'", "close": "'", "notIn": ["string", "comment"] },
-    { "open": "\"", "close": "\"", "notIn": ["string"] },
-    { "open": "`", "close": "`", "notIn": ["string", "comment"] },
     { "open": "/**", "close": " */", "notIn": ["string"] }
   ],
   "autoCloseBefore": ";:.,=}])>` \n\t",
   "surroundingPairs": [
     ["{", "}"],
-    ["[", "]"],
-    ["(", ")"],
-    ["'", "'"],
-    ["\"", "\""],
-    ["`", "`"]
+    ["(", ")"]
   ],
   "folding": {
     "markers": {
@@ -33,8 +28,49 @@
     }
   },
   "wordPattern": "(-?\\d*\\.\\d\\w*)|([^\\`\\~\\!\\@\\#\\%\\^\\&\\*\\(\\)\\-\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\"\\,\\.\\<\\>\\/\\?\\s]+)",
+
+  // Adapted from https://github.com/microsoft/vscode/blob/fbfb939654e3ca41ace7751b5243e7e8f319129e/extensions/typescript-basics/language-configuration.json
+
   "indentationRules": {
-    "increaseIndentPattern": "^((?!.*?\\/\\*).*\\*/)?\\s*[\\}\\]].*$",
-    "decreaseIndentPattern": "^((?!\\/\\/).)*(\\{[^}\"'`]*|\\([^)\"'`]*|\\[[^\\]\"'`]*)$"
-  }
+    "increaseIndentPattern": {
+      "pattern": "^.*(\\{[^}]*|\\([^)]*)$"
+    },
+    "decreaseIndentPattern": { "pattern": "^\\s*[\\}\\)].*$" },
+    "unIndentedLinePattern": {
+      "pattern": "^(\\t|[ ])*[ ]\\*[^/]*\\*/\\s*$|^(\\t|[ ])*[ ]\\*/\\s*$|^(\\t|[ ])*\\*([ ]([^\\*]|\\*(?!/))*)?$"
+    },
+    "indentNextLinePattern": {
+      "pattern": "^((.*=>\\s*)|((.*[^\\w]+|\\s*)((if|while|for)\\s*\\(.*\\)\\s*|else\\s*)))$"
+    }
+  },
+
+  "onEnterRules": [
+    {
+      // Decrease indentation after single line if/else if/else, for, or while
+      "previousLineText": "^\\s*(((else ?)?if|for|while)\\s*\\(.*\\)\\s*|else\\s*)$",
+      // But make sure line doesn't have braces or is not another if statement
+      "beforeText": "^\\s+([^{i\\s]|i(?!f\\b))",
+      "action": {
+        "indent": "outdent"
+      }
+    },
+    // Indent when pressing enter from inside ()
+    {
+      "beforeText": "^.*\\([^\\)]*$",
+      "afterText": "^\\s*\\).*$",
+      "action": {
+        "indent": "indentOutdent",
+        "appendText": "\t"
+      }
+    },
+    // Indent when pressing enter from inside {}
+    {
+      "beforeText": "^.*\\{[^\\}]*$",
+      "afterText": "^\\s*\\}.*$",
+      "action": {
+        "indent": "indentOutdent",
+        "appendText": "\t"
+      }
+    }
+  ]
 }
