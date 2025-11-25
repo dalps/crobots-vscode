@@ -8,6 +8,7 @@ import {
   BinaryOperator,
   CallExpression,
   Const,
+  IdentifierExpression,
   UnaryExpression,
   UnaryOperator,
   type AssignmentExprLhs,
@@ -30,7 +31,6 @@ import {
   type Statement,
 } from "./statements";
 import { Maybe, zip } from "./utils";
-
 
 function rangeOfCstNodeLocation(loc: CstNodeLocation) {
   return new Range(
@@ -357,10 +357,14 @@ export default class ASTVisitor
     );
   }
 
-  identifier(ctx: cst_types.IdentifierCstChildren): Maybe<LocatedName> {
-    let ide = ctx.IDE?.at(0);
+  identifier(
+    ctx: cst_types.IdentifierCstChildren
+  ): Maybe<IdentifierExpression> {
+    let ide = ctx.IDE.at(0)!;
+    let location = fromTokens(ide);
+    let word = ide.image;
 
-    return ide && LocatedName.fromToken(ide);
+    return ide && new IdentifierExpression(word, location);
   }
 }
 

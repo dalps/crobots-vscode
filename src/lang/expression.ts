@@ -1,7 +1,6 @@
 import { Range } from "vscode";
 import { ALIASES } from "./lexer";
 import { EMPTY_RANGE, LocatedName } from "./loc_utils";
-import type { BinaryOperator, UnaryOperator } from "./operators";
 
 export type Identifier = string;
 export type Parameter = Identifier;
@@ -56,10 +55,6 @@ export class Const implements Expression {
 }
 
 export class IdentifierExpression extends LocatedName implements Expression {
-  get isValue(): boolean {
-    return false;
-  }
-
   toString(): string {
     return this.word;
   }
@@ -101,7 +96,7 @@ export class AssignmentExpression implements Expression {
 
   toString(): string {
     return this.names.reduceRight(
-      (acc, { op, name }) => `${name} ${op ? ALIASES[op] : "="} ${acc}`,
+      (acc, { op, name }) => `${name.word} ${op ? ALIASES[op] : "="} ${acc}`,
       `${this.expr}`
     );
   }
@@ -115,9 +110,7 @@ export class CallExpression implements Expression {
   ) {}
 
   toString(): string {
-    return `${this.name.word}(${this.args
-      .map((arg) => arg.toString())
-      .join(", ")})`;
+    return `${this.name.word}(${this.args.join(", ")})`;
   }
 }
 

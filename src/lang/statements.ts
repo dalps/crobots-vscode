@@ -129,7 +129,7 @@ export class VariableDeclarationStatement implements Statement {
 
   toString(level = 0): string {
     return `int ${this.declarations
-      .map(({ name, expr }) => `${name}${expr ? ` = ${expr}` : ``}`)
+      .map(({ name, expr }) => `${name.word}${expr ? ` = ${expr}` : ``}`)
       .join(", ")};`;
   }
 }
@@ -145,7 +145,7 @@ export class FunctionDeclarationStatement implements Statement {
 
   toString(level = 0): string {
     return [
-      `${this.name}(${this.params.join(", ")}) {`,
+      `${this.name.word}(${this.params.map((p) => p.word).join(", ")}) {`,
       indent(1, ...this.body.map((stmt) => stmt.toString(level + 1))),
       `}`,
     ].join(`\n`);
