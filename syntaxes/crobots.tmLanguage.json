@@ -36,12 +36,6 @@
           "name": "comment.block",
           "begin": "/\\*",
           "end": "\\*/"
-        },
-        {
-          "comment": "line comment",
-          "name": "comment.line",
-          "begin": "//",
-          "end": "$"
         }
       ]
     },
