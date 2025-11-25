@@ -55,8 +55,13 @@ export class Stack<T> {
   }
 }
 
-export function LOG(...msg: any[]) {
-  DEBUG && console.log(...msg);
-}
+export const LOG_LAYER =
+  (lvl = 1): ((...args: string[]) => void) =>
+  (...args) =>
+    DEBUG && DEBUG === lvl && console.log(...args); // quiet when DEBUG is falsy
+
+export const LOG = LOG_LAYER();
+export const LOG2 = LOG_LAYER(2);
+export const LOG3 = LOG_LAYER(3);
 
 export const md = (text?: string) => new MarkdownString(text);

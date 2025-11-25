@@ -4,6 +4,7 @@ import * as types from "./cst_parser_visitor";
 import * as vscode from "vscode";
 import { Position, Range } from "vscode";
 import { fromTokens, fromTokensStrict } from "./loc_utils";
+import { LOG2 } from "./utils";
 
 /**
  * Places where an expression context should be reported:
@@ -171,6 +172,9 @@ export default class ContextVisitor
   }
 
   ifStmt(ctx: types.IfStmtCstChildren): Context {
+    let lparen = ctx.LPAREN?.at(0);
+    let rparen = ctx.RPAREN?.at(0);
+
     let res = new Context(
       ContextKind.Statement,
       fromTokens(ctx.IF[0]),
@@ -178,14 +182,15 @@ export default class ContextVisitor
       "if"
     );
 
-    res.appendChild(
-      new Context(
-        ContextKind.Expression,
-        fromTokens(ctx.LPAREN[0], ctx.RPAREN[0]),
-        undefined,
-        "condition"
-      )
-    );
+    lparen &&
+      res.appendChild(
+        new Context(
+          ContextKind.Expression,
+          fromTokens(lparen, rparen),
+          undefined,
+          "condition"
+        )
+      );
 
     ctx.statement?.at(0) &&
       res.appendChild(this.statement(ctx.statement.at(0)?.children));
@@ -197,6 +202,9 @@ export default class ContextVisitor
   }
 
   whileStmt(ctx: types.WhileStmtCstChildren): Context {
+    let lparen = ctx.LPAREN?.at(0);
+    let rparen = ctx.RPAREN?.at(0);
+
     let res = new Context(
       ContextKind.Statement,
       fromTokens(ctx.WHILE[0]),
@@ -204,14 +212,15 @@ export default class ContextVisitor
       "while"
     );
 
-    res.appendChild(
-      new Context(
-        ContextKind.Expression,
-        fromTokens(ctx.LPAREN[0], ctx.RPAREN[0]),
-        undefined,
-        "condition"
-      )
-    );
+    lparen &&
+      res.appendChild(
+        new Context(
+          ContextKind.Expression,
+          fromTokens(lparen, rparen),
+          undefined,
+          "condition"
+        )
+      );
 
     ctx.statement?.at(0) &&
       res.appendChild(this.statement(ctx.statement.at(0)?.children));
@@ -220,6 +229,9 @@ export default class ContextVisitor
   }
 
   doWhileStmt(ctx: types.DoWhileStmtCstChildren): Context {
+    let lparen = ctx.LPAREN?.at(0);
+    let rparen = ctx.RPAREN?.at(0);
+
     let res = new Context(
       ContextKind.Statement,
       fromTokens(ctx.DO[0]),
@@ -230,7 +242,7 @@ export default class ContextVisitor
     res.appendChild(
       new Context(
         ContextKind.Expression,
-        fromTokens(ctx.LPAREN[0], ctx.RPAREN[0]),
+        fromTokens(lparen, rparen),
         undefined,
         "condition"
       )
@@ -243,21 +255,24 @@ export default class ContextVisitor
   }
 
   exprStmt(ctx: types.ExprStmtCstChildren): Context {
+    let semi = ctx.SEMICOLON[0];
     let res = new Context(
       ContextKind.Statement,
-      fromTokens(ctx.SEMICOLON[0]),
+      fromTokens(semi),
       undefined,
       "exprStmt"
     );
 
-    res.appendChild(
-      new Context(
-        ContextKind.Expression,
-        fromTokens(ctx.SEMICOLON[0]),
-        undefined,
-        "expression"
-      )
-    );
+    semi.startColumn &&
+      semi.startLine &&
+      res.appendChild(
+        new Context(
+          ContextKind.Expression,
+          fromTokens(semi),
+          undefined,
+          "expression"
+        )
+      );
 
     return res;
   }

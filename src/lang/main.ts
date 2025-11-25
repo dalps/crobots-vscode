@@ -12,9 +12,9 @@ import {
   defaultVisitor as scopeVisitor,
 } from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
-import { LOG, md } from "./utils";
+import { LOG, LOG2, md } from "./utils";
 
-export const DEBUG = false;
+export const DEBUG = 0;
 export const LANG_ID = "crobots";
 
 const API_KEYS = Object.keys(API_SPEC);
@@ -113,16 +113,21 @@ export function init(context: vscode.ExtensionContext) {
         };
         const suggestions: CompletionItem[] = [];
 
-        LOG(`Querying completions at ${location} (typing: ${word})`);
+        LOG2(`Querying completions at ${location} (typing: ${word})`);
 
         // Are we inside an expression or a statement?
         const ctxTree = contextVisitor.program(
           cst.children,
           new Range(0, 0, document.lineCount + 1, 0)
         );
+
+        LOG2(`${ctxTree}`);
+
         const ctx = ctxTree.queryRange(location);
         if (!ctx)
           return [...KeywordCompletions, ...getApiCompletions(location)];
+
+        LOG2(`context under cursor: ${ctx}`);
 
         switch (ctx.kind) {
           case ContextKind.Identifier:
