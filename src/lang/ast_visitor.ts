@@ -97,7 +97,7 @@ export default class ASTVisitor
         ?.slice(1)
         // Only consider the names between '(' and ')' and ignore the K&R style declarations some ancient programs used to sandwich between ')' and '{'
         .filter(
-          (p) => 
+          (p) =>
             (p.location?.endOffset || 0) <
             (ctx.RPAREN.at(0)?.startOffset || Infinity)
         )
@@ -169,7 +169,7 @@ export default class ASTVisitor
     let ifKw = ctx.IF?.at(0);
     let condition = this.visit<Expression>(ctx.expression);
     let thenBranch = this.visit<Statement>(ctx.statement);
-    let elseBranch = this.visit<Statement>(ctx.statement.at(1));
+    let elseBranch = this.visit<Statement>(ctx.statement?.at(1));
 
     return (
       ifKw &&
