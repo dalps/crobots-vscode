@@ -1,6 +1,5 @@
 import { type IToken } from "chevrotain";
-import * as vscode from "vscode";
-import { Range, Position } from "vscode";
+import { Position, Range } from "vscode";
 
 export function fromTokens(start: IToken, end?: IToken): Range {
   const startPos = new Position(start.startLine! - 1, start.startColumn! - 1);

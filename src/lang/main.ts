@@ -1,18 +1,17 @@
 import * as vscode from "vscode";
 import { CompletionItem, CompletionItemKind, Range, SymbolKind } from "vscode";
 import { API_SPEC } from "../lang/api";
-import { Maybe, parseProgram } from "../lang/ast_visitor";
-import { ContextKind, stringOfContextKind } from "../lang/context";
+import { parseProgram } from "../lang/ast_visitor";
+import { ContextKind } from "../lang/context";
 import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
-import { LocatedName, showPosition, showRange } from "../lang/loc_utils";
+import { LocatedName } from "../lang/loc_utils";
 import {
-  BLOCK_SCOPE_ID,
   GLOBAL_SCOPE_ID,
-  defaultVisitor as scopeVisitor,
+  defaultVisitor as scopeVisitor
 } from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
-import { LOG, LOG2, md } from "./utils";
+import { LOG, LOG2, Maybe, md } from "./utils";
 
 export const DEBUG = 0;
 export const LANG_ID = "crobots";

@@ -5,22 +5,23 @@ import type * as cst_types from "./cst_parser_visitor";
 import {
   AssignmentExpression,
   BinaryExpression,
+  BinaryOperator,
   CallExpression,
   Const,
   UnaryExpression,
+  UnaryOperator,
   type AssignmentExprLhs,
   type BinaryExprRhs,
   type Expression,
 } from "./expression";
 import { EMPTY_RANGE, fromTokens, LocatedName } from "./loc_utils";
-import type { BinaryOperator, UnaryOperator } from "./operators";
-import { Program } from "./program";
 import {
   BlockStatement,
   EmptyStatement,
   ExpressionStatement,
   FunctionDeclarationStatement,
   IfStatement,
+  Program,
   ReturnStatement,
   SequenceStatement,
   VariableDeclarationStatement,
@@ -28,9 +29,8 @@ import {
   type Declaration,
   type Statement,
 } from "./statements";
-import { zip } from "./utils";
+import { Maybe, zip } from "./utils";
 
-export type Maybe<T> = T | undefined;
 
 function rangeOfCstNodeLocation(loc: CstNodeLocation) {
   return new Range(

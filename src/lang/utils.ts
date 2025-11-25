@@ -1,6 +1,8 @@
 import { MarkdownString } from "vscode";
 import { DEBUG } from "./main";
 
+export type Maybe<T> = T | undefined;
+
 export const TODO = new Error("TODO");
 
 export function zip<A, B>(as: A[], bs: B[]): [A, B][] {
@@ -29,30 +31,6 @@ export function fsplice<T>(
   const newArr = arr.slice();
   newArr.splice(start, deleteCount, ...items);
   return newArr;
-}
-
-export const StackIsEmpty = new Error("The stack is empty.");
-
-export class Stack<T> {
-  protected stack: T[] = [];
-
-  get top(): T {
-    const top = this.stack.at(-1);
-    if (!top) throw StackIsEmpty;
-    return top;
-  }
-
-  push(env: T) {
-    this.stack.push(env);
-  }
-
-  pop(): T | undefined {
-    return this.stack.pop();
-  }
-
-  clear() {
-    this.stack = [];
-  }
 }
 
 export const LOG_LAYER =

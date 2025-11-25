@@ -1,11 +1,9 @@
 import { Range } from "vscode";
-import { NoRuleApplies, type ASTNode, type Expression } from "./expression";
+import { type ASTNode, type Expression } from "./expression";
 import type { LocatedName } from "./loc_utils";
-import { State } from "./state";
+import { Maybe } from "./utils";
 
-export interface Statement extends ASTNode {
-  step(st: State): StatementStepResult;
-}
+export interface Statement extends ASTNode {}
 
 export function tabs(level = 1) {
   return "  ".repeat(level);
@@ -23,22 +21,6 @@ export enum StatementStepResultKind {
   Return,
   Statement,
 }
-
-export interface StateResult extends Statement {
-  kind: StatementStepResultKind.State;
-}
-
-export interface ReturnResult extends Statement {
-  kind: StatementStepResultKind.Return;
-  value?: number;
-}
-
-export interface StatementResult extends Statement {
-  kind: StatementStepResultKind.Statement;
-  stmt: Statement;
-}
-
-export type StatementStepResult = StateResult | ReturnResult | StatementResult;
 
 export interface Declaration {
   name: LocatedName;
@@ -72,41 +54,8 @@ function prettyPrintBody(level: number, prefix: string, body: Statement) {
   return [prefix, indent(1, body.toString(level))].join("\n");
 }
 
-function StateResult(): StateResult {
-  return {
-    kind: StatementStepResultKind.State,
-    step(_st) {
-      throw NoRuleApplies;
-    },
-  };
-}
-
-function ReturnResult(value?: number): ReturnResult {
-  return {
-    kind: StatementStepResultKind.Return,
-    value,
-    step(_st) {
-      throw NoRuleApplies;
-    },
-  };
-}
-
-function StatementResult(stmt: Statement): StatementResult {
-  return {
-    kind: StatementStepResultKind.Statement,
-    stmt,
-    step(st) {
-      return this.stmt.step(st);
-    },
-  };
-}
-
 export class EmptyStatement implements Statement {
   constructor(public location: Range) {}
-
-  step(): StatementStepResult {
-    return StateResult();
-  }
 
   toString(): string {
     return ";";
@@ -117,29 +66,9 @@ export class IfStatement implements Statement {
   constructor(
     public condition: Expression,
     public thenBranch: Statement,
-    public elseBranch?: Statement,
+    public elseBranch: Maybe<Statement>,
     public location: Range
   ) {}
-
-  step(st: State): StatementStepResult {
-    if (this.condition.isValue) {
-      const b = this.condition.eval(st);
-
-      return b
-        ? StatementResult(this.thenBranch)
-        : this.elseBranch
-        ? StatementResult(this.elseBranch)
-        : StateResult();
-    } else {
-      return StatementResult(
-        new IfStatement(
-          this.condition.step(st),
-          this.thenBranch,
-          this.elseBranch
-        )
-      );
-    }
-  }
 
   toString(level = 0): string {
     const lines = [
@@ -160,43 +89,13 @@ export class WhileStatement implements Statement {
     public location: Range
   ) {}
 
-  step(_st: State): StatementStepResult {
-    return StatementResult(
-      new WhileExecution(this.condition, new SequenceStatement(this.body, this))
-    );
-  }
-
   toString(level = 0): string {
     return prettyPrintBody(level, `while (${this.condition})`, this.body);
   }
 }
 
-export class WhileExecution implements Statement {
-  constructor(public condition: Expression, public body: Statement) {}
-
-  step(st: State): StatementStepResult {
-    if (this.condition.isValue) {
-      if (this.condition.eval(st)) {
-        return StatementResult(this.body);
-      } else {
-        return StateResult();
-      }
-    } else {
-      return StatementResult(
-        new WhileExecution(this.condition.step(st), this.body)
-      );
-    }
-  }
-}
-
 export class ExpressionStatement implements Statement {
   constructor(public expr: Expression, public location: Range) {}
-
-  step(st: State): StatementStepResult {
-    return this.expr.isValue
-      ? StateResult()
-      : StatementResult(new ExpressionStatement(this.expr.step(st)));
-  }
 
   toString(level = 0): string {
     return `${this.expr};`;
@@ -205,13 +104,6 @@ export class ExpressionStatement implements Statement {
 
 export class BlockStatement implements Statement {
   constructor(public body: Statement[], public location: Range) {}
-
-  step(st: State): StatementStepResult {
-    st.save();
-    return StatementResult(
-      new BlockExecution(SequenceStatement.from(this.body))
-    );
-  }
 
   toString(level = 0, braces = false): string {
     const lines: string[] = [];
@@ -224,41 +116,8 @@ export class BlockStatement implements Statement {
   }
 }
 
-export class BlockExecution implements Statement {
-  constructor(public body: Statement) {}
-
-  step(st: State): StatementStepResult {
-    const result = this.body.step(st);
-
-    switch (result.kind) {
-      case StatementStepResultKind.State:
-      case StatementStepResultKind.Return: {
-        st.restore();
-        return result;
-      }
-      case StatementStepResultKind.Statement: {
-        return StatementResult(new BlockExecution(result.stmt));
-      }
-    }
-  }
-
-  toString(level = 0): string {
-    return indent(level, "<{", this.body.toString(level + 1), "}>");
-  }
-}
-
 export class ReturnStatement implements Statement {
   constructor(public expr: Expression | undefined, public location: Range) {}
-
-  step(st: State): StatementStepResult {
-    if (this.expr) {
-      return this.expr.isValue
-        ? ReturnResult(this.expr.eval(st))
-        : StatementResult(new ReturnStatement(this.expr.step(st)));
-    } else {
-      return ReturnResult();
-    }
-  }
 
   toString(level = 0): string {
     return `return ${this.expr};`;
@@ -267,33 +126,6 @@ export class ReturnStatement implements Statement {
 
 export class VariableDeclarationStatement implements Statement {
   constructor(public declarations: Declaration[], public location: Range) {}
-
-  step(st: State): StatementStepResult {
-    const needsStep = this.declarations.findIndex(
-      ({ expr }) => expr && !expr.isValue
-    );
-
-    if (needsStep < 0) {
-      // declare all
-
-      this.declarations.forEach(({ name, expr }) => {
-        const init = expr?.eval(st);
-        st.defineVar(name.word, init);
-      });
-
-      return StateResult();
-    } else {
-      const d = this.declarations[needsStep];
-      this.declarations.splice(needsStep, 1, {
-        ...d,
-        expr: d.expr?.step(st),
-      });
-
-      return StatementResult(
-        new VariableDeclarationStatement(this.declarations)
-      );
-    }
-  }
 
   toString(level = 0): string {
     return `int ${this.declarations
@@ -311,15 +143,6 @@ export class FunctionDeclarationStatement implements Statement {
     public doc?: string
   ) {}
 
-  step(st: State): StatementStepResult {
-    st.defineFunc(
-      this.name.word,
-      this.params.map(({ word: name }) => name),
-      this.body
-    );
-    return StateResult();
-  }
-
   toString(level = 0): string {
     return [
       `${this.name}(${this.params.join(", ")}) {`,
@@ -336,20 +159,7 @@ export class SequenceStatement implements Statement {
     public location: Range
   ) {}
 
-  step(st: State): StatementStepResult {
-    const left1 = this.left.step(st);
-
-    switch (left1.kind) {
-      case StatementStepResultKind.Statement:
-        return StatementResult(new SequenceStatement(left1.stmt, this.right));
-      case StatementStepResultKind.State:
-        return StatementResult(this.right);
-      case StatementStepResultKind.Return:
-        return left1;
-    }
-  }
-
-  static from(statements: Statement[]): Statement {
+  static from(...statements: Statement[]): Statement {
     if (statements.length === 1) return statements[0];
 
     return statements
@@ -370,14 +180,23 @@ export class SequenceStatement implements Statement {
   }
 }
 
-export function traceStatement(statement: Statement, st: State): Statement[] {
-  try {
-    const s1 = statement.step(st);
-    const tr = traceStatement(s1, st);
-    tr.push(statement);
-    return tr;
-  } catch (e: any) {
-    if (e.name !== "NoRuleApplies") throw e;
-    return [statement];
+/**
+ * A Program is a list of declarations, one of which is called main and
+ * serves as the entry point of the robot.
+ */
+export class Program implements ASTNode {
+  public toplevel: Statement;
+
+  constructor(public toplevelStatements: Statement[], public location: Range) {
+    this.toplevel = SequenceStatement.from(...toplevelStatements);
+
+    this.location = toplevelStatements.reduce(
+      (acc, stmt) => acc.union(stmt.location),
+      new Range(0, 0, 0, 0)
+    );
+  }
+
+  toString() {
+    return this.toplevel.toString(0);
   }
 }

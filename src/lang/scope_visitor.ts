@@ -13,12 +13,12 @@ import {
   showRange,
   strictContainsRange,
 } from "./loc_utils";
-import type { Program } from "./program";
 import {
   BlockStatement,
   ExpressionStatement,
   FunctionDeclarationStatement,
   IfStatement,
+  Program,
   ReturnStatement,
   VariableDeclarationStatement,
   WhileStatement,

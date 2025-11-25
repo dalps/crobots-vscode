@@ -1,5 +1,3 @@
-import { DEG2RAD, normalizeDegrees, RAD2DEG } from "./MathUtils";
-
 export interface APICall {
   params: { name: string; descr?: string }[];
   returns: { descr?: string };
@@ -28,11 +26,6 @@ export interface MathAPI {
 }
 
 const TRIG_SCALE = 100_000;
-
-function intTrig(fun: (x: number) => number) {
-  return (x: number) =>
-    Math.round(fun(normalizeDegrees(x) * DEG2RAD) * TRIG_SCALE);
-}
 
 export interface ArgumentDescription {
   label: string;
@@ -240,16 +233,3 @@ Object.entries(API_SPEC).forEach(([name, info]) => {
 
   API_SPEC[name].label = `${name}(${paramsStr})${retStr}`;
 });
-
-/**
- * Default implementation of the math API
- */
-export const MATH_API: MathAPI = {
-  rand: (bound: number): number => Math.round(Math.random() * bound),
-  sqrt: (x: number): number => Math.round(Math.sqrt(Math.abs(x))),
-  sin: intTrig(Math.sin),
-  cos: intTrig(Math.cos),
-  tan: intTrig(Math.tan),
-  atan: (x: number): number => Math.round(Math.atan(x / TRIG_SCALE) * RAD2DEG),
-  // debug: (x) => log(`DEBUG: ${x}`, palette.brightYellow),
-};
