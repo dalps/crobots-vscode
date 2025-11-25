@@ -8,7 +8,7 @@ import { parseProgram as parseCst } from "../lang/cst_parser";
 import { LocatedName } from "../lang/loc_utils";
 import {
   GLOBAL_SCOPE_ID,
-  defaultVisitor as scopeVisitor
+  defaultVisitor as scopeVisitor,
 } from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
 import { LOG, LOG2, Maybe, md } from "./utils";
@@ -112,7 +112,7 @@ export function init(context: vscode.ExtensionContext) {
         };
         const suggestions: CompletionItem[] = [];
 
-        LOG2(`Querying completions at ${location} (typing: ${word})`);
+        // LOG2(`Querying completions at ${location} (typing: ${word})`);
 
         // Are we inside an expression or a statement?
         const ctxTree = contextVisitor.program(
@@ -120,13 +120,13 @@ export function init(context: vscode.ExtensionContext) {
           new Range(0, 0, document.lineCount + 1, 0)
         );
 
-        LOG2(`${ctxTree}`);
-
+        // LOG2(`${ctxTree}`);
+        
         const ctx = ctxTree.queryRange(location);
         if (!ctx)
           return [...KeywordCompletions, ...getApiCompletions(location)];
-
-        LOG2(`context under cursor: ${ctx}`);
+        
+        // LOG2(`context under cursor: ${ctx}`);
 
         switch (ctx.kind) {
           case ContextKind.Identifier:
@@ -323,10 +323,12 @@ export function init(context: vscode.ExtensionContext) {
       "(",
       ","
     )
-    // vscode.languages.registerDocumentFormattingEditProvider(LANG_ID, {
-    //   provideDocumentFormattingEdits(document, options, token) {
-    //     throw TODO;
-    //   },
-    // });
   );
+
+  // vscode.languages.registerDocumentFormattingEditProvider(LANG_ID, {
+  //   provideDocumentFormattingEdits(document, options, token) {
+  //     vscode.window.showInformationMessage("Formatting not yet implemented");
+  //     return [];
+  //   },
+  // });
 }
