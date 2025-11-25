@@ -376,7 +376,7 @@ export class ScopeVisitor {
 
     if (!def) {
       // this.errors.set(ctx.name, {
-      //   message: `${location}: ${callName} is undefined.`,
+      //   message: `${showRange(location)}: ${callName} is undefined.`,
       //   loc: location,
       // });
       // return;
@@ -384,7 +384,9 @@ export class ScopeVisitor {
 
     if (def && def.kind === SymbolKind.Variable) {
       this.errors.set(ctx.name, {
-        message: `${location}: ${callName} is a variable, but a function is expected here.`,
+        message: `${showRange(
+          location
+        )}: ${callName} is a variable, but a function is expected here.`,
         location,
       });
       return;
@@ -402,7 +404,7 @@ export class ScopeVisitor {
 
     if (!def) {
       this.errors.set(ctx, {
-        message: `${location}: ${varName} is undefined.`,
+        message: `${showRange(location)}: ${varName} is undefined.`,
         location,
       });
       return;
@@ -410,7 +412,9 @@ export class ScopeVisitor {
 
     if (def.kind === SymbolKind.Function) {
       this.errors.set(ctx, {
-        message: `${location}: ${varName} is a function, but a variable is expected here.`,
+        message: `${showRange(
+          location
+        )}: ${varName} is a function, but a variable is expected here.`,
         location,
       });
       return;

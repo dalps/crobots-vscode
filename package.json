@@ -22,6 +22,10 @@
       {
         "command": "extension.runRobot",
         "title": "Run robot"
+      },
+      {
+        "command": "extension.showASTRanges",
+        "title": "Highlight parsed statements"
       }
     ],
     "languages": [

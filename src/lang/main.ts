@@ -5,13 +5,20 @@ import { parseProgram } from "../lang/ast_visitor";
 import { ContextKind } from "../lang/context";
 import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
-import { LocatedName } from "../lang/loc_utils";
+import { LocatedName, showRange } from "../lang/loc_utils";
 import {
   GLOBAL_SCOPE_ID,
   defaultVisitor as scopeVisitor,
 } from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
-import { LOG, LOG2, Maybe, md } from "./utils";
+import { Color, LOG, LOG2, Maybe, md } from "./utils";
+import { ASTNode } from "./expression";
+import {
+  BlockStatement,
+  FunctionDeclarationStatement,
+  IfStatement,
+  WhileStatement,
+} from "./statements";
 
 export const DEBUG = 0;
 export const LANG_ID = "crobots";
@@ -121,11 +128,11 @@ export function init(context: vscode.ExtensionContext) {
         );
 
         // LOG2(`${ctxTree}`);
-        
+
         const ctx = ctxTree.queryRange(location);
         if (!ctx)
           return [...KeywordCompletions, ...getApiCompletions(location)];
-        
+
         // LOG2(`context under cursor: ${ctx}`);
 
         switch (ctx.kind) {
@@ -325,10 +332,93 @@ export function init(context: vscode.ExtensionContext) {
     )
   );
 
-  // vscode.languages.registerDocumentFormattingEditProvider(LANG_ID, {
-  //   provideDocumentFormattingEdits(document, options, token) {
-  //     vscode.window.showInformationMessage("Formatting not yet implemented");
-  //     return [];
-  //   },
-  // });
+  false && vscode.languages.registerDocumentFormattingEditProvider(LANG_ID, {
+    provideDocumentFormattingEdits(document, options, token) {
+      const ast = parseProgram(document.getText());
+      scopeVisitor.program(ast);
+
+      if (!ast) return [];
+
+      // if (scopeVisitor.errors.size >= 0) {
+      //   vscode.window.showInformationMessage(
+      //     "Cannot format document: there are syntax errors."
+      //   );
+      //   [...scopeVisitor.errors.values()].forEach((e) =>
+      //     console.log(`${e.message}`)
+      //   );
+      // }
+      let edits: vscode.TextEdit[] = [];
+
+      // very coarse formatting that
+      // only formats expression, return statements and variable declarations
+      // will destroy the comments within these
+      let visitor = visitTerminals((node) => {
+        let edit = new vscode.TextEdit(node.location, node.toString());
+        edits.push(edit);
+      });
+
+      ast.toplevelStatements.forEach((s) => visitor(s));
+
+      return edits;
+    },
+  });
+
+  vscode.commands.registerTextEditorCommand(
+    "extension.showASTRanges",
+    (editor, editBuilder) => {
+      let { document } = editor;
+      let ast = parseProgram(document.getText());
+
+      let ranges: Range[] = [];
+
+      const visitor = visitTerminals((n) => ranges.push(n.location));
+      ast.toplevelStatements.forEach((s) => visitor(s));
+
+      ranges.forEach((e) => {
+        const backgroundColor = new Color().with({ h: Math.random(), a: 0.5 });
+        const borderColor = backgroundColor.with({ l: 0.75 });
+
+        let deco = vscode.window.createTextEditorDecorationType({
+          borderStyle: `solid`,
+          borderWidth: `2px`,
+          borderColor: borderColor.toString(),
+          backgroundColor: backgroundColor.toString(),
+          borderRadius: `5px`,
+        });
+
+        editor?.setDecorations(deco, [e]);
+
+        setTimeout(() => {
+          editor?.setDecorations(deco, []);
+        }, 5000);
+      });
+    }
+  );
+}
+
+function visitTerminals(visitor: (node: ASTNode) => void) {
+  const go = (node: ASTNode) => {
+    if (
+      node instanceof BlockStatement ||
+      node instanceof FunctionDeclarationStatement
+    ) {
+      node.body.forEach((s) => go(s));
+      return;
+    }
+
+    if (node instanceof IfStatement) {
+      node.thenBranch && go(node.thenBranch);
+      node.elseBranch && go(node.elseBranch);
+      return;
+    }
+
+    if (node instanceof WhileStatement) {
+      node.body && go(node.body);
+      return;
+    }
+
+    visitor(node);
+  };
+
+  return go;
 }
