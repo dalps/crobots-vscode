@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { Range } from "vscode";
+import { Range, Diagnostic, DiagnosticSeverity } from "vscode";
 import {
   AssignmentExpression,
   BinaryExpression,
@@ -24,7 +24,7 @@ import {
   WhileStatement,
   type Statement,
 } from "./statements";
-import { LOG, LOG3 } from "./utils";
+import { LOG, LOG3, Maybe } from "./utils";
 import { API_SPEC } from "./api";
 
 type SymbolKind = vscode.SymbolKind.Function | vscode.SymbolKind.Variable;
@@ -40,10 +40,14 @@ interface Definition {
   container?: string;
 }
 
-interface ScopeError {
-  message: string;
-  location: Range;
-}
+const START_ENV: Map<string, Definition> = new Map();
+Object.keys(API_SPEC).map((name) => [
+  name,
+  {
+    kind: SymbolKind.Function,
+    name,
+  },
+]);
 
 interface ScopeData {
   names: Map<string, Definition>;
@@ -120,7 +124,7 @@ export class Scope implements ScopeNode {
   /**
    * Get the smallest scope that contains the given range.
    */
-  queryRange(range: Range): Scope | undefined {
+  queryRange(range: Range): Maybe<Scope> {
     // By the invariant, if this scope doesn't contain the range then neither its children do
     // You might want to generalize this for a predicate
     if (!strictContainsRange(this.range, range)) return;
@@ -134,7 +138,7 @@ export class Scope implements ScopeNode {
   /**
    * Search for a name's definition in the scope or in its ancestors.
    */
-  queryName(name: LocatedName): Definition | undefined {
+  queryName(name: LocatedName): Maybe<Definition> {
     if (!strictContainsRange(this.range, name.location)) return;
 
     return this.names.get(name.word) || this.parent?.queryName(name);
@@ -151,7 +155,7 @@ ${this.children.map((ch) => ch.toString(level + 1)).join("")}`;
 }
 
 export class ScopeVisitor {
-  public errors = new Map<LocatedName, ScopeError>();
+  public errors = new Map<LocatedName, Diagnostic>();
 
   public definitions = new Set<Definition>();
 
@@ -159,7 +163,7 @@ export class ScopeVisitor {
   private variablesRefs = new Map<LocatedName, Range>();
 
   /** Cache for function references */
-  private functionsRefs = new Map<LocatedName, Range | undefined>();
+  private functionsRefs = new Map<LocatedName, Maybe<Range>>();
 
   private globalScope?: Scope;
   private activeScope?: Scope;
@@ -274,6 +278,8 @@ export class ScopeVisitor {
     ctx.toplevelStatements.forEach((decl) => this.toplevelStmt(decl));
 
     LOG(`\n${this.globalScope}`);
+
+    this.checkFunctions();
   }
 
   private toplevelStmt(ctx: Statement) {
@@ -318,8 +324,18 @@ export class ScopeVisitor {
     ctx.declarations.forEach(({ name, expr }) => {
       this.defineVariable(name);
 
-      // visit the initializer
-      expr && this.expression(expr);
+      // visit the initializer (not supported by the compiler)
+      if (expr) {
+        this.errors.set(
+          new LocatedName("", expr.location),
+          new Diagnostic(
+            expr.location,
+            `unsupported initializer`,
+            DiagnosticSeverity.Warning
+          )
+        );
+        this.expression(expr);
+      }
     });
   }
 
@@ -376,19 +392,19 @@ export class ScopeVisitor {
     const { word: funName, location } = ctx.name;
     const def = this.activeScope?.queryName(ctx.name);
 
-    if (!def) {
-      return this.reportUndefined(ctx.name);
-    }
-
     if (def && def.kind === SymbolKind.Variable) {
-      this.errors.set(ctx.name, {
-        message: `${funName} is a variable, but a function is expected here.`,
-        location,
-      });
+      this.errors.set(
+        ctx.name,
+        new Diagnostic(
+          location,
+          `${funName} is a variable, but a function was expected here`,
+          DiagnosticSeverity.Warning
+        )
+      );
       return;
     }
 
-    this.functionsRefs.set(ctx.name, def.name.location);
+    this.functionsRefs.set(ctx.name, def?.name.location);
 
     // visit the args
     ctx.args.forEach((expr) => this.expression(expr));
@@ -398,27 +414,65 @@ export class ScopeVisitor {
     const { word: varName, location } = ctx;
     const def = this.activeScope?.queryName(ctx);
 
-    if (!def) return this.reportUndefined(ctx);
+    if (!def) {
+      this.errors.set(
+        ctx,
+        new Diagnostic(
+          location,
+          `undeclared variable ${varName}`,
+          DiagnosticSeverity.Warning
+        )
+      );
+      return;
+    }
 
     if (def.kind === SymbolKind.Function) {
-      this.errors.set(ctx, {
-        message: `${varName} is a function, but a variable is expected here.`,
-        location,
-      });
+      this.errors.set(
+        ctx,
+        new Diagnostic(
+          location,
+          `${varName} is a function, but a variable was expected here`,
+          DiagnosticSeverity.Warning
+        )
+      );
       return;
     }
 
     this.variablesRefs.set(ctx, def.name.location);
   }
 
-  reportUndefined(name: LocatedName) {
-    const { word, location } = name;
-    if (word in API_SPEC) return;
+  private checkFunctions() {
+    let mainDefined = false;
 
-    this.errors.set(name, {
-      message: `${word} is undefined.`,
-      location,
+    this.definitions.forEach(({ name }) => {
+      const { word, location } = name;
+      mainDefined ||= word === "main";
+
+      if (word in API_SPEC) {
+        this.errors.set(
+          name,
+          new Diagnostic(location, `function definition same as intrinsic`)
+        );
+      }
     });
+
+    if (!mainDefined) {
+      const dummyName = new LocatedName("", new Range(0, 0, 0, 1));
+      this.errors.set(
+        dummyName,
+        new Diagnostic(dummyName.location, "main not defined")
+      );
+    }
+
+    [...this.functionsRefs.entries()].forEach(
+      ([name, def]) =>
+        !(name.word in API_SPEC) &&
+        !def &&
+        this.errors.set(
+          name,
+          new Diagnostic(name.location, `function referenced but not found`)
+        )
+    );
   }
 }
 

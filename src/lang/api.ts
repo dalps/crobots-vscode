@@ -124,12 +124,12 @@ export const API_SPEC: Record<string, RobotAPIDetails> = {
     documentation: "Get the robots's current speed.",
     return: { type: "int", documentation: "A percent of the speed." },
   },
-  heading: {
-    label: "heading",
-    detail: "Robot's heading",
-    documentation: "Get the robots's current heading.",
-    return: { type: "int", documentation: "A value within the range 0-359." },
-  },
+  // heading: {
+  //   label: "heading",
+  //   detail: "Robot's heading",
+  //   documentation: "Get the robots's current heading.",
+  //   return: { type: "int", documentation: "A value within the range 0-359." },
+  // },
   loc_x: {
     label: "loc_x",
     detail: "Robot's x coordinate",

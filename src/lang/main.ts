@@ -431,11 +431,5 @@ export function updateDiagnostics(
   const ast = parseProgram(document.getText());
   scopeVisitor.program(ast);
 
-  collection.set(
-    document.uri,
-    [...scopeVisitor.errors.values()].map(({ location, message }) => {
-      let d = new vscode.Diagnostic(location, message);
-      return d;
-    })
-  );
+  collection.set(document.uri, [...scopeVisitor.errors.values()]);
 }
