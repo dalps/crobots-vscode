@@ -34,7 +34,7 @@ export function fsplice<T>(
 }
 
 export const LOG_LAYER =
-  (lvl = 1): ((...args: string[]) => void) =>
+  (lvl = 1): ((...args: any[]) => void) =>
   (...args) =>
     DEBUG && DEBUG === lvl && console.log(...args); // quiet when DEBUG is falsy
 

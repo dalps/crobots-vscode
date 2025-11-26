@@ -5,13 +5,12 @@ import { parseProgram } from "../lang/ast_visitor";
 import { ContextKind } from "../lang/context";
 import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
-import { LocatedName, showRange } from "../lang/loc_utils";
+import { LocatedName } from "../lang/loc_utils";
 import {
   GLOBAL_SCOPE_ID,
   defaultVisitor as scopeVisitor,
 } from "../lang/scope_visitor";
 import { ROBOT_LANG } from "./crobots.contribution";
-import { Color, LOG, LOG2, Maybe, md } from "./utils";
 import { ASTNode } from "./expression";
 import {
   BlockStatement,
@@ -19,6 +18,7 @@ import {
   IfStatement,
   WhileStatement,
 } from "./statements";
+import { Color, LOG, Maybe, md } from "./utils";
 
 export const DEBUG = 0;
 export const LANG_ID = "crobots";
@@ -106,7 +106,7 @@ export function getApiCompletions(range: vscode.Range): CompletionItem[] {
   });
 }
 
-export function init(context: vscode.ExtensionContext) {
+export function initLanguageFeatures(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.languages.registerCompletionItemProvider(LANG_ID, {
       provideCompletionItems(document, position, token, context) {
@@ -332,36 +332,37 @@ export function init(context: vscode.ExtensionContext) {
     )
   );
 
-  false && vscode.languages.registerDocumentFormattingEditProvider(LANG_ID, {
-    provideDocumentFormattingEdits(document, options, token) {
-      const ast = parseProgram(document.getText());
-      scopeVisitor.program(ast);
+  false &&
+    vscode.languages.registerDocumentFormattingEditProvider(LANG_ID, {
+      provideDocumentFormattingEdits(document, options, token) {
+        const ast = parseProgram(document.getText());
+        scopeVisitor.program(ast);
 
-      if (!ast) return [];
+        if (!ast) return [];
 
-      // if (scopeVisitor.errors.size >= 0) {
-      //   vscode.window.showInformationMessage(
-      //     "Cannot format document: there are syntax errors."
-      //   );
-      //   [...scopeVisitor.errors.values()].forEach((e) =>
-      //     console.log(`${e.message}`)
-      //   );
-      // }
-      let edits: vscode.TextEdit[] = [];
+        // if (scopeVisitor.errors.size >= 0) {
+        //   vscode.window.showInformationMessage(
+        //     "Cannot format document: there are syntax errors."
+        //   );
+        //   [...scopeVisitor.errors.values()].forEach((e) =>
+        //     console.log(`${e.message}`)
+        //   );
+        // }
+        let edits: vscode.TextEdit[] = [];
 
-      // very coarse formatting that
-      // only formats expression, return statements and variable declarations
-      // will destroy the comments within these
-      let visitor = visitTerminals((node) => {
-        let edit = new vscode.TextEdit(node.location, node.toString());
-        edits.push(edit);
-      });
+        // very coarse formatting that
+        // only formats expression, return statements and variable declarations
+        // will destroy the comments within these
+        let visitor = visitTerminals((node) => {
+          let edit = new vscode.TextEdit(node.location, node.toString());
+          edits.push(edit);
+        });
 
-      ast.toplevelStatements.forEach((s) => visitor(s));
+        ast.toplevelStatements.forEach((s) => visitor(s));
 
-      return edits;
-    },
-  });
+        return edits;
+      },
+    });
 
   vscode.commands.registerTextEditorCommand(
     "extension.showASTRanges",
@@ -421,4 +422,20 @@ function visitTerminals(visitor: (node: ASTNode) => void) {
   };
 
   return go;
+}
+
+export function updateDiagnostics(
+  document: vscode.TextDocument,
+  collection: vscode.DiagnosticCollection
+) {
+  const ast = parseProgram(document.getText());
+  scopeVisitor.program(ast);
+
+  collection.set(
+    document.uri,
+    [...scopeVisitor.errors.values()].map(({ location, message }) => {
+      let d = new vscode.Diagnostic(location, message);
+      return d;
+    })
+  );
 }

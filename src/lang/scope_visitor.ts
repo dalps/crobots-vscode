@@ -24,7 +24,8 @@ import {
   WhileStatement,
   type Statement,
 } from "./statements";
-import { LOG } from "./utils";
+import { LOG, LOG3 } from "./utils";
+import { API_SPEC } from "./api";
 
 type SymbolKind = vscode.SymbolKind.Function | vscode.SymbolKind.Variable;
 
@@ -264,6 +265,7 @@ export class ScopeVisitor {
     this.variablesRefs.clear();
     this.functionsRefs.clear();
     this.definitions.clear();
+    this.errors.clear();
 
     // reset the global scope
     this.globalScope = new Scope(ctx.location, undefined, GLOBAL_SCOPE_ID);
@@ -371,28 +373,22 @@ export class ScopeVisitor {
   }
 
   private callExpr(ctx: CallExpression) {
-    const { word: callName, location } = ctx.name;
+    const { word: funName, location } = ctx.name;
     const def = this.activeScope?.queryName(ctx.name);
 
     if (!def) {
-      // this.errors.set(ctx.name, {
-      //   message: `${showRange(location)}: ${callName} is undefined.`,
-      //   loc: location,
-      // });
-      // return;
+      return this.reportUndefined(ctx.name);
     }
 
     if (def && def.kind === SymbolKind.Variable) {
       this.errors.set(ctx.name, {
-        message: `${showRange(
-          location
-        )}: ${callName} is a variable, but a function is expected here.`,
+        message: `${funName} is a variable, but a function is expected here.`,
         location,
       });
       return;
     }
 
-    this.functionsRefs.set(ctx.name, def?.name.location);
+    this.functionsRefs.set(ctx.name, def.name.location);
 
     // visit the args
     ctx.args.forEach((expr) => this.expression(expr));
@@ -402,25 +398,27 @@ export class ScopeVisitor {
     const { word: varName, location } = ctx;
     const def = this.activeScope?.queryName(ctx);
 
-    if (!def) {
-      this.errors.set(ctx, {
-        message: `${showRange(location)}: ${varName} is undefined.`,
-        location,
-      });
-      return;
-    }
+    if (!def) return this.reportUndefined(ctx);
 
     if (def.kind === SymbolKind.Function) {
       this.errors.set(ctx, {
-        message: `${showRange(
-          location
-        )}: ${varName} is a function, but a variable is expected here.`,
+        message: `${varName} is a function, but a variable is expected here.`,
         location,
       });
       return;
     }
 
     this.variablesRefs.set(ctx, def.name.location);
+  }
+
+  reportUndefined(name: LocatedName) {
+    const { word, location } = name;
+    if (word in API_SPEC) return;
+
+    this.errors.set(name, {
+      message: `${word} is undefined.`,
+      location,
+    });
   }
 }
 
