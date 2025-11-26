@@ -21,3 +21,7 @@ publish:
 
 stats:
     vsce show dalps.crobots-vscode
+
+get-docs:
+    cd docs && pandoc --extract-media=. --from=html --to=gfm -o crobots_manual.md https://tpoindex.github.io/crobots/docs/crobots_manual.html --verbose
+    # bad: pandoc --from=html --to=gfm --embed-resources --standalone -o docs/crobots_manual.md https://tpoindex.github.io/crobots/docs/crobots_manual.html 
