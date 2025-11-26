@@ -2,7 +2,7 @@
 
 This Visual Studio Code extension provides IntelliSense for the [CROBOTS](https://tpoindex.github.io/crobots) programming language.
 
-CROBOTS is a programming game made in 1985 by Tom Poindexter, where robot programs coded by the players seek out and destroy other robot programs. Check out the [home](https://tpoindex.github.io/crobots/) and the [manual](https://tpoindex.github.io/crobots/docs/crobots_manual.html#2).
+CROBOTS is a programming game made in 1985 by Tom Poindexter, where players code robot control programs whose job is to seek out and destroy other robots. Check out the [home](https://tpoindex.github.io/crobots/) and the [manual](https://tpoindex.github.io/crobots/docs/crobots_manual.html#2) of this little gem of history.
 
 ## Features
 
@@ -12,7 +12,7 @@ CROBOTS is a programming game made in 1985 by Tom Poindexter, where robot progra
 * *References view*: hit Shift+F12 on a symbol to view all its occurrences
 * *Inline suggestions*: context-aware autocompletion for keywords, local variables and intrinsic functions
 * *Variable renaming*: hit F2 on a symbol to rename all its occurrences
-* *Diagnostic information*: get compile errors and warnings about your robot in the editor and in the Problems Panel (Ctrl+Shift+M)
+* *Diagnostic information*: get compile errors and warnings about your robot in the editor and in the Problems Panel (shortcut: Ctrl+Shift+M)
 * *Rich intrinsic function docs*: get signature and hover help for instrinsic functions
 
 These features are available as soon as you open a file with the `.r` extension.
@@ -23,4 +23,4 @@ The language features are powered by a [chevrotain](https://chevrotain.io/docs/)
 
 ---
 
-This extension was made for the 40th anniversary of CROBOTS. Hope it boosts someone's submission to the [CROBOTS 2025 Tournament](https://crobots.deepthought.it/home.php?page=tournament2025&link=0) 🤖
+This extension was made for the 40th anniversary of CROBOTS. Hope it boosts someone's submission to the [Crobots 2025 Tournament](https://crobots.deepthought.it/home.php?page=tournament2025&link=0) 🤖
