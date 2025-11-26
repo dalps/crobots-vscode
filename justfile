@@ -4,21 +4,20 @@ common_opts := "--format=cjs --platform=node --bundle --external:vscode --outfil
 default: build
 
 build:
-  esbuild {{entrypoints}} {{common_opts}} --sourcemap
+    esbuild {{ entrypoints }} {{ common_opts }} --sourcemap
 
 watch:
-  esbuild {{entrypoints}} {{common_opts}} --sourcemap --watch
+    esbuild {{ entrypoints }} {{ common_opts }} --sourcemap --watch
 
 bundle:
-  esbuild {{entrypoints}} {{common_opts}} --minify
+    esbuild {{ entrypoints }} {{ common_opts }} --minify
 
 # invokes build command from npm scripts
 package version:
-  vsce pack {{version}} -o vsix/
+    vsce pack {{ version }} -o vsix/
 
 publish:
-  vsce publish
+    vsce publish
 
 stats:
-  vsce show dalps.crobots-vscode
-
+    vsce show dalps.crobots-vscode
