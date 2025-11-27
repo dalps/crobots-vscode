@@ -31,12 +31,18 @@
     "languages": [
       {
         "id": "crobots",
+        "icon": {
+          "light": "./icons/icon-light.svg",
+          "dark": "./icons/icon-dark.svg"
+        },
         "aliases": [
           "CROBOTS"
         ],
         "extensions": [
           ".r",
-          ".R"
+          ".ro",
+          ".robot",
+          ".bot"
         ],
         "configuration": "./language-configuration.json"
       }
