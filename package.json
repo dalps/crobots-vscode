@@ -21,11 +21,15 @@
     "commands": [
       {
         "command": "extension.runRobot",
-        "title": "Run robot"
+        "title": "Crobots: Run robot"
       },
       {
         "command": "extension.showASTRanges",
-        "title": "Highlight parsed statements"
+        "title": "Crobots: Highlight parsed statements"
+      },
+      {
+        "command": "extension.openManual",
+        "title": "Crobots: Open manual"
       }
     ],
     "languages": [
@@ -36,7 +40,8 @@
           "dark": "./icons/icon-dark.svg"
         },
         "aliases": [
-          "CROBOTS"
+          "CROBOTS",
+          "Crobots"
         ],
         "extensions": [
           ".r",

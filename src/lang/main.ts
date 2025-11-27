@@ -329,7 +329,11 @@ export function initLanguageFeatures(context: vscode.ExtensionContext) {
       },
       "(",
       ","
-    )
+    ),
+
+    // vscode.languages.registerCodeActionsProvider(LANG_ID, {
+    //   provideCodeActions(document, range, context, token) {},
+    // })
   );
 
   false &&

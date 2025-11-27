@@ -15,7 +15,7 @@ CROBOTS is a programming game made in 1985 by Tom Poindexter, where players code
 * *Diagnostic information*: get compile errors and warnings about your robot in the editor and in the Problems Panel (shortcut: Ctrl+Shift+M)
 * *Rich intrinsic function docs*: get signature and hover help for instrinsic functions
 
-These features are available as soon as you open a file with the `.r` extension.
+These features are available as soon as you open a file with the `.r` or `.robot` extension.
 
 ## Dev notes
 
