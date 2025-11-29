@@ -1,5 +1,7 @@
+import * as vscode from "vscode";
 import { type IToken } from "chevrotain";
 import { Position, Range } from "vscode";
+import { Maybe } from "./utils";
 
 export function fromTokens(start: IToken, end?: IToken): Range {
   const startPos = new Position(start.startLine! - 1, start.startColumn! - 1);
@@ -47,5 +49,39 @@ export class LocatedName implements LocatedName {
 
   toString() {
     return `${this.word}${showRange(this.location)}`;
+  }
+}
+
+export function getWordAtPosition(
+  document: vscode.TextDocument,
+  position: Position
+): Maybe<LocatedName> {
+  let location = document.getWordRangeAtPosition(position);
+  if (!location) return;
+  let word = document.getText(location);
+
+  return new LocatedName(word, location);
+}
+
+/**
+ * Replacement for ITextModel.findPreviousMatch
+ */
+export function findPreviousMatch(
+  document: vscode.TextDocument,
+  searchString: string,
+  position: Position
+): Maybe<Range> {
+  const line = document.lineAt(position.line);
+  const idx = line.text.indexOf(searchString);
+
+  if (idx >= 0) {
+    const res = new Range(
+      position.line,
+      idx,
+      position.line,
+      idx + searchString.length - 1
+    );
+
+    return res;
   }
 }

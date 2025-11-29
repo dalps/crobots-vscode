@@ -5,7 +5,12 @@ import { parseProgram } from "../lang/ast_visitor";
 import { ContextKind } from "../lang/context";
 import { defaultVisitor as contextVisitor } from "../lang/context_cst_visitor";
 import { parseProgram as parseCst } from "../lang/cst_parser";
-import { LocatedName } from "../lang/loc_utils";
+import {
+  findPreviousMatch,
+  getWordAtPosition,
+  LocatedName,
+  showRange,
+} from "../lang/loc_utils";
 import {
   GLOBAL_SCOPE_ID,
   defaultVisitor as scopeVisitor,
@@ -18,49 +23,15 @@ import {
   IfStatement,
   WhileStatement,
 } from "./statements";
-import { Color, LOG, Maybe, md } from "./utils";
+import { Color, LOG, LOG3, Maybe, md } from "./utils";
 
-export const DEBUG = 0;
+export const DEBUG = 3;
 export const LANG_ID = "crobots";
 
 const API_KEYS = Object.keys(API_SPEC);
 const KEYWORDS: string[] = ROBOT_LANG["keywords"].concat(
   ROBOT_LANG["typeKeywords"]
 );
-
-function getWordAtPosition(
-  document: vscode.TextDocument,
-  position: vscode.Position
-): Maybe<LocatedName> {
-  let location = document.getWordRangeAtPosition(position);
-  if (!location) return;
-  let word = document.getText(location);
-
-  return new LocatedName(word, location);
-}
-
-/**
- * Replacement for ITextModel.findPreviousMatch
- */
-function findPreviousMatch(
-  document: vscode.TextDocument,
-  searchString: string,
-  position: vscode.Position
-) {
-  const line = document.lineAt(position.line);
-  const idx = line.text.indexOf(searchString);
-
-  if (idx >= 0) {
-    const res = new Range(
-      position.line,
-      idx,
-      position.line,
-      idx + searchString.length - 1
-    );
-
-    return res;
-  }
-}
 
 export function getScopeCompletions(
   text: string,
@@ -331,9 +302,33 @@ export function initLanguageFeatures(context: vscode.ExtensionContext) {
       ","
     ),
 
-    // vscode.languages.registerCodeActionsProvider(LANG_ID, {
-    //   provideCodeActions(document, range, context, token) {},
-    // })
+    vscode.languages.registerCodeActionsProvider(
+      LANG_ID,
+      {
+        provideCodeActions(document, range, context, token) {
+          const ast = parseProgram(document.getText());
+          scopeVisitor.program(ast, document);
+
+          // LOG3(
+          //   `Requesting code actions at range ${showRange(
+          //     range
+          //   )}. Let's see if there are any...`
+          // );
+
+          return [...scopeVisitor.codeActions.entries()].flatMap(([r, a]) => {
+            // LOG3(
+            //   `action range ${showRange(r)} contains cursor ${showRange(
+            //     range
+            //   )}?: ${r.contains(range)}.`
+            // );
+            return r.contains(range) ? [a] : [];
+          });
+        },
+      },
+      {
+        providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+      }
+    )
   );
 
   false &&
@@ -433,7 +428,7 @@ export function updateDiagnostics(
   collection: vscode.DiagnosticCollection
 ) {
   const ast = parseProgram(document.getText());
-  scopeVisitor.program(ast);
+  scopeVisitor.program(ast, document);
 
   collection.set(document.uri, [...scopeVisitor.errors.values()]);
 }

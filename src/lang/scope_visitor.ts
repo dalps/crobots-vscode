@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { Range, Diagnostic, DiagnosticSeverity } from "vscode";
+import { Diagnostic, DiagnosticSeverity, Range } from "vscode";
+import { API_SPEC } from "./api";
 import {
   AssignmentExpression,
   BinaryExpression,
@@ -9,9 +10,8 @@ import {
 } from "./expression";
 import {
   LocatedName,
-  showPosition,
   showRange,
-  strictContainsRange,
+  strictContainsRange
 } from "./loc_utils";
 import {
   BlockStatement,
@@ -24,8 +24,7 @@ import {
   WhileStatement,
   type Statement,
 } from "./statements";
-import { LOG, LOG3, Maybe } from "./utils";
-import { API_SPEC } from "./api";
+import { LOG, Maybe } from "./utils";
 
 type SymbolKind = vscode.SymbolKind.Function | vscode.SymbolKind.Variable;
 
@@ -155,7 +154,9 @@ ${this.children.map((ch) => ch.toString(level + 1)).join("")}`;
 }
 
 export class ScopeVisitor {
+  public document?: vscode.TextDocument;
   public errors = new Map<LocatedName, Diagnostic>();
+  public codeActions = new Map<Range, vscode.CodeAction>();
 
   public definitions = new Set<Definition>();
 
@@ -264,12 +265,14 @@ export class ScopeVisitor {
    * This is the main method of the visitor and must be called before
    * performing any query.
    */
-  program(ctx: Program) {
+  program(ctx: Program, document?: vscode.TextDocument) {
     // init
+    this.document = document;
     this.variablesRefs.clear();
     this.functionsRefs.clear();
     this.definitions.clear();
     this.errors.clear();
+    this.codeActions.clear();
 
     // reset the global scope
     this.globalScope = new Scope(ctx.location, undefined, GLOBAL_SCOPE_ID);
@@ -326,14 +329,38 @@ export class ScopeVisitor {
 
       // visit the initializer (not supported by the compiler)
       if (expr) {
-        this.errors.set(
-          new LocatedName("", expr.location),
-          new Diagnostic(
-            expr.location,
-            `unsupported initializer`,
-            DiagnosticSeverity.Warning
-          )
+        const rangeWithName = name.location.union(expr.location);
+
+        let d = new Diagnostic(
+          rangeWithName,
+          `unsupported initializer`,
+          DiagnosticSeverity.Warning
         );
+        d.code = `crobots.unsupportedInitializer`;
+
+        this.errors.set(new LocatedName("", expr.location), d);
+
+        // suggest a quick fix
+        if (this.document) {
+          let { uri } = this.document;
+          let fix = new vscode.CodeAction(
+            `Extract to assignment`,
+            vscode.CodeActionKind.QuickFix
+          );
+
+          fix.diagnostics = [d];
+          fix.isPreferred = true;
+          fix.edit = new vscode.WorkspaceEdit();
+          fix.edit.replace(uri, rangeWithName, `${name.word}`);
+          fix.edit.insert(
+            uri,
+            expr.location.start.translate(1),
+            `\n${name.word} = ${expr};`
+          );
+
+          this.codeActions.set(rangeWithName, fix);
+        }
+
         this.expression(expr);
       }
     });
