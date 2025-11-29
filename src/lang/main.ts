@@ -25,7 +25,7 @@ import {
 } from "./statements";
 import { Color, LOG, LOG3, Maybe, md } from "./utils";
 
-export const DEBUG = 3;
+export const DEBUG = 0;
 export const LANG_ID = "crobots";
 
 const API_KEYS = Object.keys(API_SPEC);
@@ -305,30 +305,42 @@ export function initLanguageFeatures(context: vscode.ExtensionContext) {
     vscode.languages.registerCodeActionsProvider(
       LANG_ID,
       {
-        provideCodeActions(document, range, context, token) {
+        provideCodeActions(document, selection, context, token) {
           const ast = parseProgram(document.getText());
           scopeVisitor.program(ast, document);
 
-          // LOG3(
-          //   `Requesting code actions at range ${showRange(
-          //     range
-          //   )}. Let's see if there are any...`
-          // );
+          LOG3(
+            `Requesting code actions at range ${showRange(
+              selection
+            )}. Let's see if there are any...`
+          );
 
-          return [...scopeVisitor.codeActions.entries()].flatMap(([r, a]) => {
-            // LOG3(
-            //   `action range ${showRange(r)} contains cursor ${showRange(
-            //     range
-            //   )}?: ${r.contains(range)}.`
-            // );
-            return r.contains(range) ? [a] : [];
-          });
+          let actions = [...scopeVisitor.codeActions.entries()].flatMap(
+            ([range, actions]) =>
+              actions.flatMap((a) => {
+                switch (a.kind) {
+                  case vscode.CodeActionKind.QuickFix:
+                  default:
+                    return range.contains(selection) ? [a] : [];
+                }
+              })
+          );
+
+          LOG3(actions);
+          return actions;
         },
       },
       {
-        providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+        providedCodeActionKinds: [
+          vscode.CodeActionKind.QuickFix,
+          vscode.CodeActionKind.RefactorExtract,
+        ],
       }
     )
+
+    // vscode.commands.registerTextEditorCommand(`crobots.extractExpression`, (editor) => {
+    //
+    // })
   );
 
   false &&

@@ -1,5 +1,11 @@
 import * as vscode from "vscode";
-import { Diagnostic, DiagnosticSeverity, Range } from "vscode";
+import {
+  Diagnostic,
+  DiagnosticSeverity,
+  CodeAction,
+  CodeActionKind,
+  Range,
+} from "vscode";
 import { API_SPEC } from "./api";
 import {
   AssignmentExpression,
@@ -8,11 +14,7 @@ import {
   UnaryExpression,
   type Expression,
 } from "./expression";
-import {
-  LocatedName,
-  showRange,
-  strictContainsRange
-} from "./loc_utils";
+import { LocatedName, showRange, strictContainsRange } from "./loc_utils";
 import {
   BlockStatement,
   ExpressionStatement,
@@ -156,7 +158,7 @@ ${this.children.map((ch) => ch.toString(level + 1)).join("")}`;
 export class ScopeVisitor {
   public document?: vscode.TextDocument;
   public errors = new Map<LocatedName, Diagnostic>();
-  public codeActions = new Map<Range, vscode.CodeAction>();
+  public codeActions = new Map<Range, vscode.CodeAction[]>();
 
   public definitions = new Set<Definition>();
 
@@ -340,26 +342,22 @@ export class ScopeVisitor {
 
         this.errors.set(new LocatedName("", expr.location), d);
 
-        // suggest a quick fix
-        if (this.document) {
-          let { uri } = this.document;
-          let fix = new vscode.CodeAction(
-            `Extract to assignment`,
-            vscode.CodeActionKind.QuickFix
-          );
+        this.createAction(
+          d,
+          `Extract to assignment`,
+          rangeWithName,
+          ({ uri }, edit) => {
+            // replace with name only
+            edit.replace(uri, rangeWithName, `${name.word}`);
 
-          fix.diagnostics = [d];
-          fix.isPreferred = true;
-          fix.edit = new vscode.WorkspaceEdit();
-          fix.edit.replace(uri, rangeWithName, `${name.word}`);
-          fix.edit.insert(
-            uri,
-            expr.location.start.translate(1),
-            `\n${name.word} = ${expr};`
-          );
-
-          this.codeActions.set(rangeWithName, fix);
-        }
+            // assign initializer in the next line
+            edit.insert(
+              uri,
+              expr.location.start.translate(1),
+              `\n${name.word} = ${expr};`
+            );
+          }
+        );
 
         this.expression(expr);
       }
@@ -399,10 +397,39 @@ export class ScopeVisitor {
     else if (ctx instanceof AssignmentExpression) this.assignExpr(ctx);
     else if (ctx instanceof CallExpression) this.callExpr(ctx);
     else if (ctx instanceof LocatedName) this.identifier(ctx);
+
+    const exprRng = ctx.location;
+    this.createAction(
+      undefined,
+      `Store in enclosing scope`,
+      exprRng,
+      async (doc, edit, fix) => {
+        // Need a fresh identifier to replace the expression.
+        // How does vscode TS plugin does the small input box?
+        // no-go: https://github.com/Microsoft/vscode/issues/46660
+        const ide = "new_local";
+
+        // let ide =
+        //   (await vscode.window.showInputBox({
+        //     value: newLocal,
+        //     title: `Extract to variable`,
+        //     prompt: "Enter a fresh identifier",
+        //   })) ?? newLocal;
+
+        edit.insert(
+          doc.uri,
+          new vscode.Position(this.activeScope!.range.start.line + 1, 0),
+          `int ${ide};\n${ide} = ${ctx};\n`
+        );
+        edit.replace(doc.uri, exprRng, ide);
+      },
+      CodeActionKind.RefactorExtract
+    );
   }
 
   private unaryExpr(ctx: UnaryExpression) {
-    this.expression(ctx.expr);
+    const expr = ctx.expr;
+    this.expression(expr);
   }
 
   private binaryLeftAssocExpr(ctx: BinaryExpression) {
@@ -442,14 +469,27 @@ export class ScopeVisitor {
     const def = this.activeScope?.queryName(ctx);
 
     if (!def) {
-      this.errors.set(
-        ctx,
-        new Diagnostic(
-          location,
-          `undeclared variable ${varName}`,
-          DiagnosticSeverity.Warning
-        )
+      const d = new Diagnostic(
+        location,
+        `undeclared variable ${varName}`,
+        DiagnosticSeverity.Warning
       );
+      this.errors.set(ctx, d);
+
+      let insertText = `int ${varName};\n`;
+
+      this.createAction(d, "Declare locally", location, (doc, edit) => {
+        edit.insert(
+          doc.uri,
+          new vscode.Position(this.activeScope!.range.start.line + 1, 0),
+          insertText
+        );
+      });
+
+      this.createAction(d, "Declare globally", location, (doc, edit) => {
+        edit.insert(doc.uri, new vscode.Position(0, 0), insertText);
+      });
+
       return;
     }
 
@@ -466,6 +506,33 @@ export class ScopeVisitor {
     }
 
     this.variablesRefs.set(ctx, def.name.location);
+  }
+
+  private createAction(
+    diagn: Maybe<vscode.Diagnostic>,
+    title: string,
+    range: vscode.Range,
+    editBuilder: (
+      document: vscode.TextDocument,
+      edit: vscode.WorkspaceEdit,
+      fix: CodeAction
+    ) => void,
+    kind = CodeActionKind.QuickFix
+  ): Maybe<CodeAction> {
+    if (!this.document) return;
+
+    let fix = new vscode.CodeAction(title, kind);
+
+    if (diagn) fix.diagnostics = [diagn];
+    fix.isPreferred = true;
+    fix.edit = new vscode.WorkspaceEdit();
+
+    editBuilder(this.document, fix.edit, fix);
+
+    let actions = this.codeActions.get(range);
+    actions ? actions.push(fix) : this.codeActions.set(range, [fix]);
+
+    return fix;
   }
 
   private checkFunctions() {
