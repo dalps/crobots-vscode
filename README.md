@@ -13,14 +13,11 @@ CROBOTS is a programming game made in 1985 by Tom Poindexter, where players code
 * *Inline suggestions*: context-aware autocompletion for keywords, local variables and intrinsic functions
 * *Variable renaming*: hit F2 on a symbol to rename all its occurrences
 * *Diagnostic information*: get compile errors and warnings about your robot in the editor and in the Problems Panel (shortcut: Ctrl+Shift+M)
-* *Rich intrinsic function docs*: get signature and hover help for instrinsic functions
+* *Code actions*: quickly extract expressions in variables, fix undeclared variables
+* *Intrinsic function docs*: get signature and hover help for instrinsic functions
 
 These features are available as soon as you open a file with the `.r` or `.robot` extension.
 
 ## Dev notes
 
 The language features are powered by a [chevrotain](https://chevrotain.io/docs/) parser written in TypeScript. Issues and pull requests are welcome.
-
----
-
-This extension was made for the 40th anniversary of CROBOTS. Hope it boosts someone's submission to the [Crobots 2025 Tournament](https://crobots.deepthought.it/home.php?page=tournament2025&link=0) 🤖
