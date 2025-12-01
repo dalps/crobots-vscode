@@ -315,19 +315,34 @@ export function initLanguageFeatures(context: vscode.ExtensionContext) {
             )}. Let's see if there are any...`
           );
 
-          let actions = [...scopeVisitor.codeActions.entries()].flatMap(
-            ([range, actions]) =>
-              actions.flatMap((a) => {
+          let quickFixes: vscode.CodeAction[] = [];
+          let refactors: [Range, vscode.CodeAction][] = [];
+
+          [...scopeVisitor.codeActions.entries()].forEach(
+            ([actionRng, actions]) =>
+              actions.forEach((a) => {
                 switch (a.kind) {
                   case vscode.CodeActionKind.QuickFix:
+                    actionRng.contains(selection) && quickFixes.push(a);
+                    break;
+
                   default:
-                    return range.contains(selection) ? [a] : [];
+                    selection.contains(actionRng) &&
+                      refactors.push([actionRng, a]);
                 }
               })
           );
 
-          LOG3(actions);
-          return actions;
+          return [
+            ...quickFixes,
+            // keep only the largest refactor for the current selection
+            ...refactors
+              .sort(([r1], [r2]) =>
+                r1.isEqual(r2) ? 0 : r1.contains(r2) ? -1 : 1
+              )
+              .map(([_, a]) => a)
+              .slice(0, 1),
+          ];
         },
       },
       {
